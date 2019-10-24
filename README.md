@@ -1,6 +1,6 @@
 # gmbot
 ## Dmytro Bubela and Nazar Havryliuk
-#### Instalation on Linux:
+#### Installation on Linux:
 ```
 git clone https://github.com/Na3aga/gmbot.git
 cd gmbot
