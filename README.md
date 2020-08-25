@@ -11,3 +11,4 @@ pip3 install -r requirements.txt
 Useful information about [authorisation flow](https://google-auth-oauthlib.readthedocs.io/en/latest/reference/google_auth_oauthlib.flow.html) in Python  
 There is a [python quickstart in gmail api](https://developers.google.com/gmail/api/quickstart/python)  
 And [API itself](https://developers.google.com/gmail/api/v1/reference/users/labels/list)  
+About [Using OAuth 2.0 to Access Google APIs](https://developers.google.com/identity/protocols/oauth2)
