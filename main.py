@@ -1,9 +1,13 @@
-import sys, os, webbrowser, json
+import sys, os, json
 import asyncio
 from GM import Gmpart
 from sanic import Sanic, response
 from sanic.exceptions import ServerError
 from config import TEST_CLIENT_CREDS, TEST_EMAIL
+
+from aiogoogle import Aiogoogle
+
+test_user_creds = {"access_token":"ya29.a0AfH6SMDgfx7hu0tMtbSBIYr92yqp4AWVSwa9TEhDM-81ier34dYnd3gFC0l_ihYbAAdK1UM6zq9Ibp2RyNAJxr2ZJk6ebzGPspMiWokT-BtBegWblrayZIUKi3JoEsOxRXzLuweVkjxO3KzyzdhQuBovJfjTCBaLhBg","refresh_token":"1//0cu1M5II2GlC_CgYIARAAGAwSNwF-L9IrfKciXIEawE8-fQN7nEZCKog4mQHl2XM2sooHwbmMsvYNrkTttDjVWIc5KN9AbVi4mHI","expires_in":3599,"expires_at":"2020-08-25T16:21:24.080087","scopes":["https://www.googleapis.com/auth/gmail.readonly"],"id_token":"null","id_token_jwt":"null","token_type":"Bearer","token_uri":"https://oauth2.googleapis.com/token","token_info_uri":"https://www.googleapis.com/oauth2/v4/tokeninfo","revoke_uri":"https://oauth2.googleapis.com/revoke"}
 
 LOCAL_ADDRESS = "localhost"
 LOCAL_PORT = "5000"
@@ -72,14 +76,23 @@ async def callback(request):
         # Should either receive a code or an error
         return response.text("Something's probably wrong with your callback")
 
+async def messages_list():
+    async with Aiogoogle(client_creds = TEST_CLIENT_CREDS, user_creds = test_user_creds) as gmpart:
+        gmpart_api = await gmpart.discover('gmail', 'v1')
+        messages = await gmpart.as_user(
+            gmpart_api.users.messages.list(
+                userId='me', 
+                labelIds='INBOX', 
+                includeSpamTrash=True, 
+                maxResults=5)
+            )
+    print(messages)
 if __name__ == '__main__':
-    gmpart_api = Gmpart(TEST_CLIENT_CREDS)
-    print(gmpart_api.authorize_uri('TEST_EMAIL'))
-    app.run(host=LOCAL_ADDRESS, port=LOCAL_PORT, debug=True)
-    print('@@ After server run')
+    # gmpart_api = Gmpart(TEST_CLIENT_CREDS)
+    # print(gmpart_api.authorize_uri('TEST_EMAIL'))
+    # app.run(host=LOCAL_ADDRESS, port=LOCAL_PORT, debug=True)
+    # print('@@ After server run')
+    asyncio.run(messages_list())
 
 
-
-
-    # gmpart_api = asyncio.run(Gmpart(TEST_CLIENT_CREDS).create_api())
-    # print(gmpart_api['resources'])
+        

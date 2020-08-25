@@ -4,6 +4,7 @@ from aiogoogle.auth.utils import create_secret
 
 
 class Gmpart():
+    # TODO: save user_creds in destructor
     def __init__(self, CLIENT_CREDS, user_creds = None):
         """Init class with basic parameters
         Parameters:
