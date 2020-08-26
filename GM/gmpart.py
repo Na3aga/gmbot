@@ -1,6 +1,10 @@
 import logging
+import asyncio
 from aiogoogle import Aiogoogle
 from aiogoogle.auth.utils import create_secret
+from email import policy
+from email.parser import BytesParser
+from base64 import urlsafe_b64decode
 
 
 class Gmpart():
@@ -20,6 +24,7 @@ class Gmpart():
         self.CLIENT_CREDS = CLIENT_CREDS
         self.user_creds = user_creds
         self.state = create_secret()
+        self.gmpart_api = None
 
     def authorize_uri(self, email):
         """ Generate authozisation uri via aiogoogle's oauth wrapper
@@ -60,22 +65,37 @@ class Gmpart():
             # Downloads the API specs and creates an API object
             return await aiogoogle.discover('gmail', 'v1')
 
-    async def messages_list(self, messages_num = 5):
+    async def get_gmail_message(self, id, user_id='me', format = 'RAW'):
         async with Aiogoogle(client_creds = self.CLIENT_CREDS, user_creds = self.user_creds) as aiogoogle:
             gmpart_api = await self.create_api()
+            return await aiogoogle.as_user(gmpart_api.users.messages.get(
+                            userId = user_id, 
+                            id = id, 
+                            format = 'RAW'))
+
+    @staticmethod
+    async def make_email(future_message):
+        return BytesParser(policy=policy.default
+            ).parsebytes(urlsafe_b64decode((await future_message)['raw']))
+
+    async def messages_list(self, messages_num = 5):
+        async with Aiogoogle(client_creds = self.CLIENT_CREDS, user_creds = self.user_creds) as aiogoogle:
+            if not self.gmpart_api:
+                self.gmpart_api = await self.create_api()
             messages_ids = await aiogoogle.as_user(
-                gmpart_api.users.messages.list(
+                self.gmpart_api.users.messages.list(
                     userId='me', 
-                    labelIds='INBOX', 
+                    labelIds='INBOX',
                     includeSpamTrash=True, 
                     maxResults=messages_num)
                 )
-            messages = await aiogoogle.as_user(
-                *tuple(gmpart_api.users.messages.
-                    get(userId='me', id=message['id']) 
-                    for message in 
-                    messages_ids['messages'])
-                )
+            raw_messages = []
+            for message in messages_ids['messages']:
+                raw_messages.append(self.get_gmail_message(message['id']))
+            messages = []
+            for m in raw_messages:
+                # is there blocking?
+                messages.append(await self.make_email(m))
             self.update_access_token(aiogoogle.user_creds)
         return messages
 

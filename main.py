@@ -29,7 +29,6 @@ async def callback(request):
         await gmpart_api.build_user_creds(request.args.get('code'))
         # TODO: delete link from chat
         print(await gmpart_api.messages_list())
-        print(gmpart_api.user_creds)
         return response.json(gmpart_api.user_creds)
     else:
         # Should either receive a code or an error
@@ -37,15 +36,20 @@ async def callback(request):
 
 async def messages_list():
     gm_api = Gmpart(TEST_CLIENT_CREDS, test_user_creds)
-    print(await gm_api.messages_list())
+    msgs = await gm_api.messages_list(2)
+    for msg in msgs:
+        print('To:', msg['to'])
+        print('From:', msg['from'])
+        print('Subject:', msg['subject'])
 
 
-if __name__ == '__main__':
+
+# if __name__ == '__main__':
     # gmpart_api = Gmpart(TEST_CLIENT_CREDS)
     # print(gmpart_api.authorize_uri('TEST_EMAIL'))
     # app.run(host=LOCAL_ADDRESS, port=LOCAL_PORT, debug=True)
     # print('@@ After server run')
-    asyncio.run(messages_list())
+asyncio.run(messages_list())
 
 
         
