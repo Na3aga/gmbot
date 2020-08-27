@@ -24,7 +24,7 @@ class Gmpart():
         self.CLIENT_CREDS = CLIENT_CREDS
         self.user_creds = user_creds
         self.state = create_secret()
-        self.gmpart_api = None
+        self.__gmpart_api = None
 
     def authorize_uri(self, email):
         """ Generate authozisation uri via aiogoogle's oauth wrapper
@@ -46,11 +46,16 @@ class Gmpart():
         return uri
 
     async def build_user_creds(self, code):
+        """ Get user credentials with refresh token via secret code
+        Parameters:
+        email (str): IDK some login_hint
+        """
         async with Aiogoogle(client_creds = self.CLIENT_CREDS) as aiogoogle:
             self.user_creds = await aiogoogle.oauth2.build_user_creds(
                 grant = code,
                 client_creds = self.CLIENT_CREDS
             )
+            return self.user_creds
 
     def update_access_token(self, user_creds):
         self.user_creds['access_token'] = user_creds['access_token']
@@ -60,15 +65,27 @@ class Gmpart():
         # remember, that aiogoogle has it's own Auth manager
         # so you don't need to refresh tocken by hand
 
-    async def create_api(self):
-        async with Aiogoogle(client_creds = self.CLIENT_CREDS) as aiogoogle:
-            # Downloads the API specs and creates an API object
-            return await aiogoogle.discover('gmail', 'v1')
+    @property
+    async def gmpart_api(self):
+        """ Get discover api of gmail.readonly
+        """
+        if not self.__gmpart_api:
+            async with Aiogoogle(client_creds = self.CLIENT_CREDS) as aiogoogle:
+                # Downloads the API specs and creates an API object
+                self.__gmpart_api = await aiogoogle.discover('gmail', 'v1')
+        return self.__gmpart_api
+
+
 
     async def get_gmail_message(self, id, user_id='me', format = 'RAW'):
+        """ Ask google for a full message with specific ID
+        Parameters:
+        id (string): the ID of the message to retrieve.
+        userId (string): the user's email address. The special value `me` can be used to indicate the authenticated user.
+        format (enum string MINIMAL|FULL|RAW|METADATA): the format to return the message in.
+        """
         async with Aiogoogle(client_creds = self.CLIENT_CREDS, user_creds = self.user_creds) as aiogoogle:
-            gmpart_api = await self.create_api()
-            return await aiogoogle.as_user(gmpart_api.users.messages.get(
+            return await aiogoogle.as_user((await self.gmpart_api).users.messages.get(
                             userId = user_id, 
                             id = id, 
                             format = 'RAW'))
@@ -89,10 +106,8 @@ class Gmpart():
         messages_num (int): numbers of messages to be returned
         """
         async with Aiogoogle(client_creds = self.CLIENT_CREDS, user_creds = self.user_creds) as aiogoogle:
-            if not self.gmpart_api:
-                self.gmpart_api = await self.create_api()
             messages_ids = await aiogoogle.as_user(
-                self.gmpart_api.users.messages.list(
+                (await self.gmpart_api).users.messages.list(
                     userId='me', 
                     labelIds='INBOX',
                     includeSpamTrash=True, 
