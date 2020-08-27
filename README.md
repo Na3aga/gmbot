@@ -1,6 +1,5 @@
-# gmbot
-## Dmytro Bubela and Nazar Havryliuk
-#### Installation on Linux:
+# Gmbot
+#### Installation on Ubuntu Linux:
 ```
 git clone https://github.com/Na3aga/gmbot.git
 cd gmbot
@@ -8,7 +7,9 @@ python3 -m venv /path/to/new/virtual/environment
 source /path/to/new/virtual/environment/bin/activate
 pip3 install -r requirements.txt
 ```
-Useful information about [authorisation flow](https://google-auth-oauthlib.readthedocs.io/en/latest/reference/google_auth_oauthlib.flow.html) in Python  
-There is a [python quickstart in gmail api](https://developers.google.com/gmail/api/quickstart/python)  
-And [API itself](https://developers.google.com/gmail/api/v1/reference/users/labels/list)  
-About [Using OAuth 2.0 to Access Google APIs](https://developers.google.com/identity/protocols/oauth2)
+Example of usege in main.py
+
+Useful links  
+[Python email module examples](https://docs.python.org/3/library/email.examples.html)
+[Async Google API Client ](https://github.com/omarryhan/aiogoogle)  
+[Using OAuth 2.0 to Access Google APIs](https://developers.google.com/identity/protocols/oauth2)  
