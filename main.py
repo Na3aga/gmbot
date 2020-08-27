@@ -36,11 +36,13 @@ async def callback(request):
 
 async def messages_list():
     gm_api = Gmpart(TEST_CLIENT_CREDS, test_user_creds)
-    msgs = await gm_api.messages_list(2)
+    msgs = await gm_api.messages_list(1)
     for msg in msgs:
-        print('To:', msg['to'])
-        print('From:', msg['from'])
-        print('Subject:', msg['subject'])
+        with open(  '.msg', 'wb') as f:
+            f.write(bytes(msg))
+            print('To:', msg['to'])
+            print('From:', msg['from'])
+            print('Subject:', msg['subject'])
 
 
 

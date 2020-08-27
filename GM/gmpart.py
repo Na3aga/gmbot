@@ -75,10 +75,19 @@ class Gmpart():
 
     @staticmethod
     async def make_email(future_message):
+        """ Make email from future base64 encoded raw message
+        Parameters:
+        future_message (coroutine): base64 encoded raw message
+            (maybe RFC 2822)
+        """
         return BytesParser(policy=policy.default
             ).parsebytes(urlsafe_b64decode((await future_message)['raw']))
 
     async def messages_list(self, messages_num = 5):
+        """ Get last messages_num emails as email.message object
+        Parameters:
+        messages_num (int): numbers of messages to be returned
+        """
         async with Aiogoogle(client_creds = self.CLIENT_CREDS, user_creds = self.user_creds) as aiogoogle:
             if not self.gmpart_api:
                 self.gmpart_api = await self.create_api()
@@ -96,6 +105,7 @@ class Gmpart():
             for m in raw_messages:
                 # is there blocking?
                 messages.append(await self.make_email(m))
+            # TODO: find a way not to write this in the every `with as`
             self.update_access_token(aiogoogle.user_creds)
         return messages
 
