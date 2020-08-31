@@ -1,4 +1,4 @@
-aiogoogle
 uvloop
-
-sanic
+aiogoogle
+aiogram
+python-dotenv

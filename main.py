@@ -1,32 +1,48 @@
-import sys, os, asyncio
+import sys, asyncio
+import os
+import logging
+import TgBot
+from aiohttp import web
 from GM import Gmpart
-from sanic import Sanic, response
-from sanic.exceptions import ServerError
 from config import *
 
 from aiogoogle import Aiogoogle
 
+app = web.Application()
 
-LOCAL_ADDRESS = "localhost"
-LOCAL_PORT = "5000"
+async def index_html(request: web.Request):
+    return web.FileResponse('./index.html')
 
-app = Sanic(__name__)
+async def bot_handler(request: web.Request):
+    """Will be handling webhooks to bot
+    """
 
-@app.route('/callback/aiogoogle')
-async def callback(request):
-    if request.args.get('error'):
+    Lewis.Dispatcher.set_current(Lewis.dp)
+    Lewis.Bot.set_current(Lewis.dp.bot)
+    try:
+        await Lewis.dp.updates_handler.notify(Lewis.types.Update(**(await request.json())))
+    except Exception as err:
+        logging.error(err)
+    finally:
+        return web.Response(text='OK')
+
+async def gauthorize_callback(request):
+    """Receive user creds from google auth redirect
+    """
+    # need more tests to find how to catch the error
+    if request.rel_url.query.get('error'):
         error = {
-            'error': request.args.get('error'),
-            'error_description': request.args.get('error_description')
+            'error': request.rel_url.get('error'),
+            'error_description': request.rel_url.query.get('error_description')
         }
-        return response.json(error)
-    elif request.args.get('code'):
-        returned_state = request.args['state'][0]
+        return web.json_response(error)
+    elif request.rel_url.query.get('code'):
+        returned_state = request.query['state'][0]
         # Check state
         # TODO: uncomment and check states in DB to connect accout to chat
         # if returned_state != state:
         #     raise ServerError('NO')
-        await gmpart_api.build_user_creds(request.args.get('code'))
+        await gmpart_api.build_user_creds(request.rel_url.query.get('code'))
         # TODO: delete link from chat
         msgs = await gmpart_api.messages_list(3)
         for msg in msgs:
@@ -34,18 +50,14 @@ async def callback(request):
 
         print('save user_creds to config.py in order not to confirm app use in google every time')
         print(f'{gmpart_api.user_creds = }')
-        return response.json(gmpart_api.user_creds)
+        return web.json_response(gmpart_api.user_creds)
     else:
         # Should either receive a code or an error
-        return response.text("Something's probably wrong with your callback")
+        return web.Response(text="Something's probably wrong with your callback")
 
-"""Debug save
-# Also watch here https://docs.python.org/3/library/email.examples.html
-with open(msg['subject']+'.msg', 'wb') as f:
-            f.write(bytes(msg))
-"""
-# from python doc examples
 def store_attachments(msg):
+    """Show what can we do with emails
+    """
     import mimetypes
     # We can extract the richest alternative in order to display it:
     richest = msg.get_body()
@@ -63,25 +75,43 @@ def store_attachments(msg):
             extension = mimetypes.guess_extension(part.get_content_type())
         with open(os.path.splitext(part.get_filename())[0]+extension, 'wb') as f:
             f.write(part.get_content())
-            # again strip the <> to go from email form of cid to html form.
 
 
-async def messages_list():
-    gm_api = Gmpart(CLIENT_CREDS, user_creds)
-    msgs = await gm_api.messages_list(3)
-    for msg in msgs:
-        store_attachments(msg) 
+async def app_on_startup(app):
+    TgBot.filters.setup(dp)
+    TgBot.middlewares.setup(dp)
 
+    from TgBot.utils.notify_admins import on_startup_notify
+    await on_startup_notify(dp)
+    await dp.bot.set_webhook(TgBot.data.config.WEBHOOK_URL)
 
-# Uncomment if:
+"""
+Shutdown is not implemented
+"""
+async def app_on_cleanup(app):
+    await dp.bot.delete_webhook()
+    from TgBot.utils.notify_admins import on_shutdown_notify
+    await on_shutdown_notify(dp)
+    await dp.bot.close()
+""""""
 
-# This is your first launch
-gmpart_api = Gmpart(CLIENT_CREDS)
-print(gmpart_api.authorize_uri(EMAIL))
-app.run(host=LOCAL_ADDRESS, port=LOCAL_PORT, debug=True)
+server_routes = [web.get('/', index_html),
+    web.post(path=TgBot.data.config.WEBHOOK_PATH, handler=bot_handler),
+    web.get(path='/callback/aiogoogle', handler=gauthorize_callback)]
 
-## You have user_creds in your config
-# asyncio.run(messages_list())
+# On startup server
+# https://docs.aiohttp.org/en/stable/web_advanced.html#background-tasks
+
+# Close webhooks on shutdown
+# https://docs.aiohttp.org/en/stable/web_advanced.html#graceful-shutdown
+
+if __name__ == '__main__':
+    from TgBot.handlers import dp
+    
+    app.add_routes(server_routes)
+    app.on_startup.append(app_on_startup)
+    app.on_cleanup.append(app_on_cleanup)
+    web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
 
 
         
