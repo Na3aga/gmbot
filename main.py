@@ -12,18 +12,17 @@ app = web.Application()
 
 
 async def index_html(request: web.Request):
-    return web.FileResponse('./index.html')
+    return web.FileResponse('html/index.html')
 
 
 async def bot_handler(request: web.Request):
     """Will be handling webhooks to bot
     """
-
-    Lewis.Dispatcher.set_current(Lewis.dp)
-    Lewis.Bot.set_current(Lewis.dp.bot)
+    Dispatcher.set_current(dp)
+    Bot.set_current(dp.bot)
     try:
-        await Lewis.dp.updates_handler.notify(
-            Lewis.types.Update(**(await request.json())))
+        await dp.updates_handler.notify(
+            types.Update(**(await request.json())))
     except Exception as err:
         logging.error(err)
     finally:
@@ -111,9 +110,12 @@ server_routes = [
 # https://docs.aiohttp.org/en/stable/web_advanced.html#graceful-shutdown
 
 if __name__ == '__main__':
+    # one and the only dispatcher
     from TgBot.handlers import dp
-
     app.add_routes(server_routes)
     app.on_startup.append(app_on_startup)
     app.on_cleanup.append(app_on_cleanup)
+    # Bot, Dispatcher is used for webhook setting
+    from TgBot.loader import Bot, Dispatcher, types
+
     web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
