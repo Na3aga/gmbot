@@ -10,8 +10,10 @@ from aiogoogle import Aiogoogle
 
 app = web.Application()
 
+
 async def index_html(request: web.Request):
     return web.FileResponse('./index.html')
+
 
 async def bot_handler(request: web.Request):
     """Will be handling webhooks to bot
@@ -20,11 +22,13 @@ async def bot_handler(request: web.Request):
     Lewis.Dispatcher.set_current(Lewis.dp)
     Lewis.Bot.set_current(Lewis.dp.bot)
     try:
-        await Lewis.dp.updates_handler.notify(Lewis.types.Update(**(await request.json())))
+        await Lewis.dp.updates_handler.notify(
+            Lewis.types.Update(**(await request.json())))
     except Exception as err:
         logging.error(err)
     finally:
         return web.Response(text='OK')
+
 
 async def gauthorize_callback(request):
     """Receive user creds from google auth redirect
@@ -37,7 +41,7 @@ async def gauthorize_callback(request):
         }
         return web.json_response(error)
     elif request.rel_url.query.get('code'):
-        returned_state = request.query['state'][0]
+        # returned_state = request.query['state'][0]
         # Check state
         # TODO: uncomment and check states in DB to connect accout to chat
         # if returned_state != state:
@@ -46,14 +50,16 @@ async def gauthorize_callback(request):
         # TODO: delete link from chat
         msgs = await gmpart_api.messages_list(3)
         for msg in msgs:
-            store_attachments(msg) 
+            store_attachments(msg)
 
         print('save user_creds to config.py in order not to confirm app use in google every time')
         print(f'{gmpart_api.user_creds = }')
         return web.json_response(gmpart_api.user_creds)
     else:
         # Should either receive a code or an error
-        return web.Response(text="Something's probably wrong with your callback")
+        return web.Response(
+            text="Something's probably wrong with your callback")
+
 
 def store_attachments(msg):
     """Show what can we do with emails
@@ -85,9 +91,7 @@ async def app_on_startup(app):
     await on_startup_notify(dp)
     await dp.bot.set_webhook(TgBot.data.config.WEBHOOK_URL)
 
-"""
-Shutdown is not implemented
-"""
+
 async def app_on_cleanup(app):
     await dp.bot.delete_webhook()
     from TgBot.utils.notify_admins import on_shutdown_notify
@@ -95,7 +99,8 @@ async def app_on_cleanup(app):
     await dp.bot.close()
 """"""
 
-server_routes = [web.get('/', index_html),
+server_routes = [
+    web.get('/', index_html),
     web.post(path=TgBot.data.config.WEBHOOK_PATH, handler=bot_handler),
     web.get(path='/callback/aiogoogle', handler=gauthorize_callback)]
 
@@ -107,11 +112,8 @@ server_routes = [web.get('/', index_html),
 
 if __name__ == '__main__':
     from TgBot.handlers import dp
-    
+
     app.add_routes(server_routes)
     app.on_startup.append(app_on_startup)
     app.on_cleanup.append(app_on_cleanup)
     web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
-
-
-        
