@@ -92,7 +92,7 @@ async def app_on_startup(app):
 
 
 async def app_on_cleanup(app):
-    await dp.bot.delete_webhook()
+    # await dp.bot.delete_webhook()
     from TgBot.utils.notify_admins import on_shutdown_notify
     await on_shutdown_notify(dp)
     await dp.bot.close()
