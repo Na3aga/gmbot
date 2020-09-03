@@ -1,4 +1,5 @@
-import sys, asyncio
+import sys
+import asyncio
 import os
 import logging
 import TgBot
@@ -10,6 +11,7 @@ from aiogoogle import Aiogoogle
 
 app = web.Application()
 
+current_states = {}
 
 async def index_html(request: web.Request):
     return web.FileResponse('html/index.html')
@@ -71,14 +73,15 @@ def store_attachments(msg):
             for line in richest.get_content().splitlines():
                 print(line)
         else:
-            print("Don't know how to display {}".format(richest.get_content_type()))
+            print("Don't know how to display {}".format(
+                richest.get_content_type()))
     for part in msg.iter_attachments():
         fn = part.get_filename()
         if fn:
             extension = os.path.splitext(part.get_filename())[1]
         else:
             extension = mimetypes.guess_extension(part.get_content_type())
-        with open(os.path.splitext(part.get_filename())[0]+extension, 'wb') as f:
+        with open(os.path.splitext(part.get_filename())[0] + extension, 'wb') as f:
             f.write(part.get_content())
 
 
