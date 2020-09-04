@@ -7,7 +7,7 @@ from TgBot.utils.misc import rate_limit
 from TgBot.states.add import AddGmail
 from TgBot.keyboards.inline.account_check import check_markup
 
-from main import GMpart, CLIENT_CREDS, current_states
+from main import Gmpart, CLIENT_CREDS, current_states
 from re import match
 import logging
 
@@ -29,7 +29,7 @@ async def add(message: types.Message, state: FSMContext):
         await message.answer('Невідомий формат пошти')
         await state.finish()
         return
-    gmpart_api = GMpart(CLIENT_CREDS)
+    gmpart_api = Gmpart(CLIENT_CREDS)
     state_account = gmpart_api.state
     chat_id = message.chat.id
     auth_uri = gmpart_api.authorize_uri(email)
