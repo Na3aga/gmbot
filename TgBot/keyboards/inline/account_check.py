@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
-def check_markup(state_account):
+def check_markup(state_account: str):
     markup = InlineKeyboardMarkup(
         row_width=2
     )
