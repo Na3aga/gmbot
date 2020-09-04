@@ -1,7 +1,9 @@
-import os
+import os, sys
 
-from dotenv import load_dotenv
-load_dotenv()
+if sys.argv[1:] == ['DEBUG']:
+    from dotenv import load_dotenv
+    load_dotenv()
+
 
 client_id = os.getenv("client_id")
 client_secret = os.getenv("client_secret")

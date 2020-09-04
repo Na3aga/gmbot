@@ -2,13 +2,14 @@ import sys
 import asyncio
 import os
 import logging
+from config import *
 import TgBot
 from aiohttp import web
 from GM import Gmpart
-from config import *
 
 from aiogoogle import Aiogoogle
 
+DEBUG = sys.argv[1:] == ['DEBUG']
 app = web.Application()
 
 current_states = {}
@@ -121,5 +122,10 @@ if __name__ == '__main__':
     app.on_cleanup.append(app_on_cleanup)
     # Bot, Dispatcher is used for webhook setting
     from TgBot.loader import Bot, Dispatcher, types
-
-    web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
+    if DEBUG:
+        TgBot.filters.setup(dp)
+        TgBot.middlewares.setup(dp)
+        from aiogram import executor
+        executor.start_polling(dp, on_shutdown=app_on_cleanup)
+    else:
+        web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)

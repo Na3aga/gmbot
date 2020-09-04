@@ -34,6 +34,7 @@ async def add(message: types.Message, state: FSMContext):
     chat_id = message.chat.id
     auth_uri = gmpart_api.authorize_uri(email)
     text = 'Надайте доступ до читання повідомлень вашої пошти ' + auth_uri
+    logging.info(f"{auth_uri = }")
     await message.answer(text, reply_markup=check_markup(state_account))
     current_states.update(
         {state_account:
