@@ -13,6 +13,7 @@ app = web.Application()
 
 current_states = {}
 
+
 async def index_html(request: web.Request):
     return web.FileResponse('html/index.html')
 
