@@ -58,10 +58,12 @@ class Gmpart():
             )
             return self.user_creds
 
-    def update_access_token(self, user_creds):
+    def update_token(self, user_creds):
         self.user_creds['access_token'] = user_creds['access_token']
         self.user_creds['expires_in'] = user_creds['expires_in']
         self.user_creds['expires_at'] = user_creds['expires_at']
+        if user_creds['refresh_token']:
+            self.user_creds['refresh_token'] = user_creds['refresh_token']
 
         # remember, that aiogoogle has it's own Auth manager
         # so you don't need to refresh tocken by hand
@@ -109,7 +111,7 @@ class Gmpart():
         async with Aiogoogle(client_creds = self.CLIENT_CREDS, user_creds = self.user_creds) as aiogoogle:
             self.my_email = await aiogoogle.as_user(
                 (await self.gmpart_api).users.getProfile())
-            self.update_access_token(aiogoogle.user_creds)
+            self.update_token(aiogoogle.user_creds)
         return self.my_email
 
     async def messages_list(self, messages_num = 5):
@@ -132,5 +134,5 @@ class Gmpart():
                 # is there blocking?
                 messages.append(await self.make_email(m))
             # TODO: find a way not to write this in the every `with as`
-            self.update_access_token(aiogoogle.user_creds)
+            self.update_token(aiogoogle.user_creds)
         return messages
