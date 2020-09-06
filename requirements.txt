@@ -2,3 +2,4 @@ uvloop
 aiogoogle
 aiogram
 python-dotenv
+asyncpg
