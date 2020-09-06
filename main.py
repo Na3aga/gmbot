@@ -45,6 +45,7 @@ async def gauthorize_callback(request):
         }
         return web.json_response(error)
     elif request.rel_url.query.get('code'):
+        gmpart_api = Gmpart(CLIENT_CREDS)
         # returned_state = request.query['state'][0]
         # Check state
         # TODO: uncomment and check states in DB to connect accout to chat
@@ -52,9 +53,9 @@ async def gauthorize_callback(request):
         #     raise ServerError('NO')
         await gmpart_api.build_user_creds(request.rel_url.query.get('code'))
         # TODO: delete link from chat
-        msgs = await gmpart_api.messages_list(3)
-        for msg in msgs:
-            store_attachments(msg)
+        # msgs = await gmpart_api.messages_list(3)
+        # for msg in msgs:
+        #     store_attachments(msg)
 
         print('save user_creds to config.py in order not to confirm app use in google every time')
         print(f'{gmpart_api.user_creds = }')

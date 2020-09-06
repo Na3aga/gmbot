@@ -89,8 +89,8 @@ class Gmpart():
             client_creds=self.CLIENT_CREDS,
             user_creds=self.user_creds) as aiogoogle:
             return await aiogoogle.as_user((await self.gmpart_api).users.messages.get(
-                            userId=user_id, 
-                            id=id, 
+                            userId=user_id,
+                            id=id,
                             format='RAW'))
 
     @staticmethod
