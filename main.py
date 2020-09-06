@@ -5,12 +5,13 @@ import logging
 from config import *
 import TgBot
 from aiohttp import web
-from GM import Gmpart
-
 from aiogoogle import Aiogoogle
+from GM import Gmpart
+from DB import PostgreSQL
 
 DEBUG = sys.argv[1:] == ['DEBUG']
 BOT_ID = None
+psqldb = None
 app = web.Application()
 
 current_states = {}
@@ -46,12 +47,16 @@ async def gauthorize_callback(request):
         return web.json_response(error)
     elif request.rel_url.query.get('code'):
         gmpart_api = Gmpart(CLIENT_CREDS)
-        # returned_state = request.query['state'][0]
+        returned_state = request.query['state'][0]
         # Check state
         # TODO: uncomment and check states in DB to connect accout to chat
-        # if returned_state != state:
-        #     raise ServerError('NO')
-        await gmpart_api.build_user_creds(request.rel_url.query.get('code'))
+        if returned_state not in current_states.keys():
+            return web.Response(text="Wrong EMAIL")
+        await gmpart_api.build_user_creds(returned_state)
+        # + email eq check
+        await dp.bot.send_message(
+            current_states[returned_state['chat_id']],
+            str(user_creds))
         # TODO: delete link from chat
         # msgs = await gmpart_api.messages_list(3)
         # for msg in msgs:
@@ -97,6 +102,9 @@ async def app_on_startup(app):
     await on_startup_notify(dp)
     BOT_ID = (await dp.bot.me).id
     await dp.bot.set_webhook(TgBot.data.config.WEBHOOK_URL)
+
+    psqldb = PostgreSQL.DataBase().connect()
+    psqldb.create_db()
 
 
 async def app_on_cleanup(app):

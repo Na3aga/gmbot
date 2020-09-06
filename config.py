@@ -11,9 +11,12 @@ client_secret = os.getenv("client_secret")
 WEBAPP_HOST = '0.0.0.0'
 WEBAPP_PORT = os.getenv('PORT')
 
+DATABASE_URL = os.getenv('DATABASE_URL')
+
 CLIENT_CREDS = {
     "client_id": client_id,
     "client_secret": client_secret,
     "scopes": ['https://www.googleapis.com/auth/gmail.readonly'],
     "redirect_uri": "https://lewis-bots.herokuapp.com/callback/aiogoogle",
 }
+
