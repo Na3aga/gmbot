@@ -10,6 +10,7 @@ from GM import Gmpart
 from aiogoogle import Aiogoogle
 
 DEBUG = sys.argv[1:] == ['DEBUG']
+BOT_ID = None
 app = web.Application()
 
 current_states = {}
@@ -93,6 +94,7 @@ async def app_on_startup(app):
 
     from TgBot.utils.notify_admins import on_startup_notify
     await on_startup_notify(dp)
+    BOT_ID = (await dp.bot.me).id
     await dp.bot.set_webhook(TgBot.data.config.WEBHOOK_URL)
 
 
