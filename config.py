@@ -15,5 +15,5 @@ CLIENT_CREDS = {
     "client_id": client_id,
     "client_secret": client_secret,
     "scopes": ['https://www.googleapis.com/auth/gmail.readonly'],
-    "redirect_uri": "http://https://lewis-bots.herokuapp.com/callback/aiogoogle",
+    "redirect_uri": "https://lewis-bots.herokuapp.com/callback/aiogoogle",
 }
