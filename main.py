@@ -103,8 +103,8 @@ async def app_on_startup(app):
     BOT_ID = (await dp.bot.me).id
     await dp.bot.set_webhook(TgBot.data.config.WEBHOOK_URL)
 
-    psqldb = PostgreSQL.DataBase().connect()
-    psqldb.create_db()
+    psqldb = await PostgreSQL.DataBase().connect()
+    await psqldb.create_db()
 
 
 async def app_on_cleanup(app):
