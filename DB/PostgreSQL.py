@@ -21,7 +21,7 @@ class DataBase():
     @conn
     async def create_db(self, conn):
         logging.info('Creating DB ...')
-        with open("create_db.sql", "r") as file:
+        with open("create.sql", "r") as file:
             create_db_command = file.read()
         await conn.execute(create_db_command)
 
