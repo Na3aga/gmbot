@@ -8,13 +8,12 @@ from aiohttp import web
 from aiogoogle import Aiogoogle
 from GM import Gmpart
 from DB import PostgreSQL
+from TgBot.loader import current_states
+
 
 DEBUG = sys.argv[1:] == ['DEBUG']
 BOT_ID = None
-psqldb = None
 app = web.Application()
-
-current_states = {}
 
 
 async def index_html(request: web.Request):
@@ -47,24 +46,30 @@ async def gauthorize_callback(request):
         return web.json_response(error)
     elif request.rel_url.query.get('code'):
         gmpart_api = Gmpart(CLIENT_CREDS)
-        returned_state = request.query['state'][0]
-        # Check state
-        # TODO: uncomment and check states in DB to connect accout to chat
+        returned_state = request.query['state']
         if returned_state not in current_states.keys():
             return web.Response(text="Wrong EMAIL")
-        await gmpart_api.build_user_creds(returned_state)
-        # + email eq check
+        user_creds = await gmpart_api.build_user_creds(request.rel_url.query.get('code'))
+         # email eq check
+        logging.info(user_creds)
+        email = await gmpart_api.get_email_address(user_creds)
+        chat_id = current_states[returned_state]['chat_id']
+        chat_type = current_states[returned_state]['chat_type']
+        if current_states[returned_state]['email'] != email:
+            return web.Response(text="Emails doesn't match")
+        global psqldb
+        await psqldb.add_chat(chat_id=chat_id, chat_type=chat_type)
+        await psqldb.add_gmail(
+            email=email,
+            refresh_token=user_creds['refresh_token'],
+            access_token=user_creds['access_token'],
+            expires_at=user_creds['expires_at'],
+            chat_id=chat_id
+        )
         await dp.bot.send_message(
-            current_states[returned_state['chat_id']],
-            str(user_creds))
-        # TODO: delete link from chat
-        # msgs = await gmpart_api.messages_list(3)
-        # for msg in msgs:
-        #     store_attachments(msg)
-
-        print('save user_creds to config.py in order not to confirm app use in google every time')
-        print(f'{gmpart_api.user_creds = }')
-        return web.json_response(gmpart_api.user_creds)
+            chat_id,
+            f"Пошта {email} додана до чату")
+        raise web.HTTPFound(location='https://t.me/lewis_msg_bot')
     else:
         # Should either receive a code or an error
         return web.Response(
@@ -102,7 +107,7 @@ async def app_on_startup(app):
     await on_startup_notify(dp)
     BOT_ID = (await dp.bot.me).id
     await dp.bot.set_webhook(TgBot.data.config.WEBHOOK_URL)
-
+    global psqldb
     psqldb = await PostgreSQL.DataBase().connect()
     await psqldb.create_db()
 

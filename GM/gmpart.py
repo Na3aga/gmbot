@@ -25,7 +25,6 @@ class Gmpart():
         self.user_creds = user_creds
         self.state = create_secret()
         self.__gmpart_api = None
-        self.my_email = None
 
     def authorize_uri(self, email):
         """ Generate authozisation uri via aiogoogle's oauth wrapper
@@ -105,14 +104,14 @@ class Gmpart():
         return BytesParser(policy=policy.default
             ).parsebytes(urlsafe_b64decode((await future_message)['raw']))
 
-    async def my_email(self):
+    async def get_email_address(self, user_creds):
         """ Get email adress of current account
         """
-        async with Aiogoogle(client_creds = self.CLIENT_CREDS, user_creds = self.user_creds) as aiogoogle:
-            self.my_email = await aiogoogle.as_user(
-                (await self.gmpart_api).users.getProfile())
-            self.update_token(aiogoogle.user_creds)
-        return self.my_email
+        async with Aiogoogle(client_creds = self.CLIENT_CREDS, user_creds = user_creds) as aiogoogle:
+            profile = await aiogoogle.as_user(
+                (await self.gmpart_api).users.getProfile(userId='me')
+            )
+        return profile['emailAddress']
 
     async def messages_list(self, messages_num = 5):
         """ Get last messages_num emails as email.message object

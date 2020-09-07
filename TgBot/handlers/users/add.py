@@ -2,11 +2,11 @@ from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.builtin import Command
 
-from TgBot.loader import dp
+from TgBot.loader import dp, current_states
 from TgBot.utils.misc import rate_limit
 from TgBot.states.add import AddGmail
 
-from main import Gmpart, CLIENT_CREDS, current_states
+from main import Gmpart, CLIENT_CREDS
 from re import match
 import logging
 
@@ -31,14 +31,13 @@ async def add(message: types.Message, state: FSMContext):
     gmpart_api = Gmpart(CLIENT_CREDS)
     state_account = gmpart_api.state
     chat_id = message.chat.id
+    chat_type = message.chat.type
     auth_uri = gmpart_api.authorize_uri(email)
     text = 'Надайте доступ до читання повідомлень вашої пошти ' + auth_uri
-    logging.debug(f"{auth_uri = }"
-                  f"{state_account = }"
-                  f"{chat_id = }")
     await message.answer(text)
     current_states.update(
         {state_account:
             {'chat_id': chat_id,
-             'email': email}})
+             'email': email,
+             'chat_type': chat_type}})
     await state.finish()
