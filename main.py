@@ -50,11 +50,13 @@ async def gauthorize_callback(request):
         if returned_state not in current_states.keys():
             return web.Response(text="Wrong EMAIL")
         user_creds = await gmpart_api.build_user_creds(request.rel_url.query.get('code'))
-         # email eq check
         logging.info(user_creds)
         email = await gmpart_api.get_email_address(user_creds)
         chat_id = current_states[returned_state]['chat_id']
         chat_type = current_states[returned_state]['chat_type']
+        logging.info(f"{email = }")
+        logging.info(f"{chat_id = }")
+        logging.info(f"{chat_type = }")
         if current_states[returned_state]['email'] != email:
             return web.Response(text="Emails doesn't match")
         global psqldb

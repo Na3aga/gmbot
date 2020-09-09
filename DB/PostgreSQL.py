@@ -14,8 +14,7 @@ class DataBase():
     def conn(func):
         async def decor(self, *args, **kwargs):
             async with self.pool.acquire() as conn:
-                async with conn.transaction():
-                    return await func(self, conn=conn, *args, **kwargs)
+                return await func(self, conn=conn, *args, **kwargs)
         return decor
 
     @conn
