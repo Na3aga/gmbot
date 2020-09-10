@@ -1,11 +1,8 @@
 import sys
-import asyncio
 import os
 import logging
-from config import *
 import TgBot
 from aiohttp import web
-from aiogoogle import Aiogoogle
 from GM import Gmpart
 from DB import PostgreSQL
 from TgBot.loader import current_states
