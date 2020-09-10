@@ -2,7 +2,7 @@ import logging
 
 from aiogram import Dispatcher
 
-from TgBot.data.config import admins
+from config import admins
 
 
 async def on_startup_notify(dp: Dispatcher):
