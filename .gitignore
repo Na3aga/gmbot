@@ -1,3 +1,5 @@
+__pycache__/
+*.py[cod]
 credentials.json*
 token.json*
 token.pickle

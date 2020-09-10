@@ -1,3 +1,7 @@
+uvloop
 aiogoogle
-
-sanic
+aiogram
+python-dotenv
+asyncpg
+pip
+wheel
