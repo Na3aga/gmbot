@@ -5,4 +5,3 @@ token.json*
 token.pickle
 env/
 .vscode
-__pycache__/
