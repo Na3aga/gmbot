@@ -59,16 +59,16 @@ class DataBase():
                         access_token,
                         expires_at,
                         chat_id):
-    """
-    Calling stored procedure in DB that adds email and its data and link
-    FK with each other
-    Parameters:
-    email (str): gmail address up to 128 bytes
-    refresh_token (str): refresh token for offline access up to 512 bytes
-    access_token (str): access user token  up to 2048 bytes
-    expires_at (str): time of token expiration to 32 bytes
-    chat_id (int): gmail address up to 128 bytes
-    """
+        """
+        Calling stored procedure in DB that adds email and its data and link
+        FK with each other
+        Parameters:
+        email (str): gmail address up to 128 bytes
+        refresh_token (str): refresh token for offline access up to 512 bytes
+        access_token (str): access user token  up to 2048 bytes
+        expires_at (str): time of token expiration to 32 bytes
+        chat_id (int): gmail address up to 128 bytes
+        """
         logging.debug(f"Gmail {email} is adding...")
         await conn.execute(
             "call add_gmail($1,$2,$3,$4,$5)",
@@ -77,7 +77,6 @@ class DataBase():
             access_token,
             expires_at,
             chat_id)
-
 
     @conn
     async def get_gmail_creds(self, conn, email):
