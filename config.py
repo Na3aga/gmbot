@@ -11,6 +11,16 @@ client_secret = os.getenv("client_secret")
 WEBAPP_HOST = '0.0.0.0'
 WEBAPP_PORT = os.getenv('PORT')
 
+HOST = 'https://lewis-bots.herokuapp.com'
+WEBHOOK_PATH = "/api/v1/lewis/webhook/"
+WEBHOOK_URL = f"{HOST}{WEBHOOK_PATH}"
+
+# Telegram admins
+admins = [
+    os.getenv("ADMIN_ID"),
+]
+BOT_TOKEN = str(os.getenv("BOT_TOKEN"))
+
 DATABASE_URL = os.getenv('DATABASE_URL')
 
 CLIENT_CREDS = {
@@ -20,3 +30,4 @@ CLIENT_CREDS = {
     "redirect_uri": "https://lewis-bots.herokuapp.com/callback/aiogoogle",
 }
 
+DB_IP = os.getenv("DB_IP")

@@ -20,6 +20,10 @@ async def index_html(request: web.Request):
     return web.FileResponse('html/index.html')
 
 
+async def answers_html(request: web.Request):
+    return web.FileResponse('html/answers.html')
+
+
 async def bot_handler(request: web.Request):
     """Will be handling webhooks to bot
     """
@@ -59,18 +63,19 @@ async def gauthorize_callback(request):
         logging.info(f"{chat_type = }")
         if current_states[returned_state]['email'] != email:
             return web.Response(text="Emails doesn't match")
-        global psqldb
-        await psqldb.add_chat(chat_id=chat_id, chat_type=chat_type)
-        await psqldb.add_gmail(
-            email=email,
-            refresh_token=user_creds['refresh_token'],
-            access_token=user_creds['access_token'],
-            expires_at=user_creds['expires_at'],
-            chat_id=chat_id
-        )
-        await dp.bot.send_message(
-            chat_id,
-            f"Пошта {email} додана до чату")
+        else:
+            global psqldb
+            await psqldb.add_chat(chat_id=chat_id, chat_type=chat_type)
+            await psqldb.add_gmail(
+                email=email,
+                refresh_token=user_creds['refresh_token'],
+                access_token=user_creds['access_token'],
+                expires_at=user_creds['expires_at'],
+                chat_id=chat_id
+            )
+            await dp.bot.send_message(
+                chat_id,
+                f"Пошта {email} додана до чату")
         raise web.HTTPFound(location='https://t.me/lewis_msg_bot')
     else:
         # Should either receive a code or an error
@@ -102,28 +107,43 @@ def store_attachments(msg):
 
 
 async def app_on_startup(app):
+    """
+    Work before server startup
+    Parameters:
+    app (aiohttp.web.Application: current server app
+    """
     TgBot.filters.setup(dp)
     TgBot.middlewares.setup(dp)
 
     from TgBot.utils.notify_admins import on_startup_notify
     await on_startup_notify(dp)
     BOT_ID = (await dp.bot.me).id
-    await dp.bot.set_webhook(TgBot.data.config.WEBHOOK_URL)
+    await dp.bot.set_webhook(WEBHOOK_URL)
     global psqldb
     psqldb = await PostgreSQL.DataBase().connect()
     await psqldb.create_db()
 
 
 async def app_on_cleanup(app):
-    # await dp.bot.delete_webhook()
+    """
+    Graceful shutdown work
+    Parameters:
+    app (aiohttp.web.Application: current server app
+    """
+    """
+    Bad idea because it cancels ability
+    to wake up server via webhook i.e. telegram message
+    await dp.bot.delete_webhook()
+    """
     from TgBot.utils.notify_admins import on_shutdown_notify
     await on_shutdown_notify(dp)
     await dp.bot.close()
-""""""
+
 
 server_routes = [
     web.get('/', index_html),
-    web.post(path=TgBot.data.config.WEBHOOK_PATH, handler=bot_handler),
+    web.get('/answers', answers_html),
+    web.post(path=WEBHOOK_PATH, handler=bot_handler),
     web.get(path='/callback/aiogoogle', handler=gauthorize_callback)]
 
 # On startup server
@@ -140,10 +160,14 @@ if __name__ == '__main__':
     app.on_cleanup.append(app_on_cleanup)
     # Bot, Dispatcher is used for webhook setting
     from TgBot.loader import Bot, Dispatcher, types
+
     if DEBUG:
+        # Ability to test only bot via long polling
+        # need Upgrade
         TgBot.filters.setup(dp)
         TgBot.middlewares.setup(dp)
         from aiogram import executor
         executor.start_polling(dp, on_shutdown=app_on_cleanup)
+
     else:
         web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)

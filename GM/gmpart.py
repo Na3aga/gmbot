@@ -106,6 +106,8 @@ class Gmpart():
 
     async def get_email_address(self, user_creds):
         """ Get email adress of current account
+        Parameters:
+        user_creds (dict): user credentials
         """
         async with Aiogoogle(client_creds = self.CLIENT_CREDS, user_creds = user_creds) as aiogoogle:
             profile = await aiogoogle.as_user(
