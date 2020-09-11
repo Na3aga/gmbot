@@ -15,5 +15,3 @@ app = web.Application()
 gmpart_api = Gmpart(CLIENT_CREDS)
 TgBot.filters.setup(dp)
 TgBot.middlewares.setup(dp)
-
-psqldb = run(PostgreSQL.DataBase().connect(DATABASE_URL))
