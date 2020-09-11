@@ -1,11 +1,10 @@
 import asyncpg
 import logging
-from config import DATABASE_URL
 
 
 class DataBase():
     @classmethod
-    async def connect(cls):
+    async def connect(cls, DATABASE_URL):
         """
         Create class instance with established connection
         also create db if not exists
