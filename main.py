@@ -99,8 +99,6 @@ async def app_on_startup(app):
     Parameters:
     app (aiohttp.web.Application: current server app
     """
-    global psqldb
-    psqldb = await PostgreSQL.DataBase().connect(DATABASE_URL)
     await on_startup_notify(dp)
     await dp.bot.set_webhook(WEBHOOK_URL)
 
