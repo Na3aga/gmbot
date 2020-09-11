@@ -1,6 +1,8 @@
-import os, sys
+import os
+import sys
 
-if sys.argv[1:] == ['DEBUG']:
+DEBUG = sys.argv[1:] == ['DEBUG']
+if DEBUG:
     from dotenv import load_dotenv
     load_dotenv()
 
@@ -11,8 +13,8 @@ client_secret = os.getenv("client_secret")
 WEBAPP_HOST = '0.0.0.0'
 WEBAPP_PORT = os.getenv('PORT')
 
-HOST = 'https://lewis-bots.herokuapp.com'
-WEBHOOK_PATH = "/api/v1/lewis/webhook/"
+HOST = os.getenv('HOST')
+WEBHOOK_PATH = "/webhook/lewis/"
 WEBHOOK_URL = f"{HOST}{WEBHOOK_PATH}"
 
 # Telegram admins
@@ -27,7 +29,6 @@ CLIENT_CREDS = {
     "client_id": client_id,
     "client_secret": client_secret,
     "scopes": ['https://www.googleapis.com/auth/gmail.readonly'],
-    "redirect_uri": "https://lewis-bots.herokuapp.com/callback/aiogoogle",
+    "redirect_uri": HOST + "/callback/aiogoogle",
 }
-
 DB_IP = os.getenv("DB_IP")
