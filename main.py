@@ -44,6 +44,7 @@ async def gauthorize_callback(request):
             'error': request.rel_url.get('error'),
             'error_description': request.rel_url.query.get('error_description')
         }
+        logging.info(error)
         return web.json_response(error)
     elif request.rel_url.query.get('code'):
         gmpart_api = Gmpart(CLIENT_CREDS)
