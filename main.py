@@ -1,6 +1,20 @@
 import logging
 from aiohttp import web
-from loader import *
+from TgBot.loader import Bot, Dispatcher, types
+from TgBot import dp
+from TgBot.utils.notify_admins import on_startup_notify
+from TgBot.utils.notify_admins import on_shutdown_notify
+from loader import (current_states,
+                    gmail_API,
+                    psqldb,
+                    WEBHOOK_URL,
+                    WEBHOOK_PATH,
+                    WEBAPP_HOST,
+                    WEBAPP_PORT,
+                    DEBUG)
+
+
+app = web.Application()
 
 
 async def index_html(request: web.Request):
@@ -40,9 +54,11 @@ async def gauthorize_callback(request):
         returned_state = request.query['state']
         if returned_state not in current_states.keys():
             return web.Response(text="Wrong EMAIL")
-        user_creds = await gmpart_api.build_user_creds(request.rel_url.query.get('code'))
+        user_creds = await gmail_API.build_user_creds(
+            request.rel_url.query.get('code')
+        )
         logging.debug(user_creds)
-        email = await gmpart_api.get_email_address(user_creds)
+        email = await gmail_API.get_email_address(user_creds)
         chat_id = current_states[returned_state]['chat_id']
         chat_type = current_states[returned_state]['chat_type']
         logging.info(f"{email = }")
@@ -69,36 +85,15 @@ async def gauthorize_callback(request):
             text="Something's probably wrong with your callback")
 
 
-def store_attachments(msg):
-    """Show what can we do with emails
-    """
-    import mimetypes
-    import os
-    # We can extract the richest alternative in order to display it:
-    richest = msg.get_body()
-    if richest['content-type'].maintype == 'text':
-        if richest['content-type'].subtype == 'plain':
-            for line in richest.get_content().splitlines():
-                print(line)
-        else:
-            print("Don't know how to display {}".format(
-                richest.get_content_type()))
-    for part in msg.iter_attachments():
-        fn = part.get_filename()
-        if fn:
-            extension = os.path.splitext(part.get_filename())[1]
-        else:
-            extension = mimetypes.guess_extension(part.get_content_type())
-        with open(os.path.splitext(part.get_filename())[0] + extension, 'wb') as f:
-            f.write(part.get_content())
-
-
 async def app_on_startup(app):
     """
     Work before server startup
     Parameters:
     app (aiohttp.web.Application: current server app
     """
+    from TgBot import filters, middlewares
+    filters.setup(dp)
+    middlewares.setup(dp)
     await on_startup_notify(dp)
     await dp.bot.set_webhook(WEBHOOK_URL)
 
