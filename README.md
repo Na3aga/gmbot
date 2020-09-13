@@ -1,4 +1,7 @@
 # Gmbot
+
+[The bot](t.me/lewis_msg_bot) is under development
+
 #### Installation on Ubuntu Linux:
 ```
 git clone https://github.com/Na3aga/gmbot.git
