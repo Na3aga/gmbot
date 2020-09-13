@@ -2,11 +2,11 @@ from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.builtin import Command
 
-from TgBot.loader import dp, current_states
+from TgBot.loader import dp
 from TgBot.utils.misc import rate_limit
 from TgBot.states.add import AddGmail
 
-from main import Gmpart, CLIENT_CREDS
+from loader import Gmpart, CLIENT_CREDS, current_states
 from re import match
 import logging
 
@@ -25,6 +25,7 @@ async def start_gmail_add(message: types.Message):
 async def add(message: types.Message, state: FSMContext):
     email = message.text.strip()
     if not match(r'^[\w\.-]+@gmail\.com$', email):
+        logging.info(f"Mail {email} was rejected")
         await message.answer('Невідомий формат пошти')
         await state.finish()
         return

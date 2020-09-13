@@ -1,11 +1,10 @@
 import asyncpg
 import logging
-from config import DATABASE_URL
 
 
 class DataBase():
     @classmethod
-    async def connect(cls):
+    async def connect(cls, DATABASE_URL):
         """
         Create class instance with established connection
         also create db if not exists
@@ -87,9 +86,9 @@ class DataBase():
         Returns:
         (asyncpg.Record): row with user credentials
         """
-        logging.debug(f"Getting credentials frim {email}")
+        logging.debug(f"Getting credentials from {email}")
         return await conn.fetchrow(
-            """select refresh_token, access_token, expires_at
+            """select access_token, refresh_token, expires_at
             from gmail
             where email = $1""",
             email)

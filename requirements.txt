@@ -3,5 +3,5 @@ aiogoogle
 aiogram
 python-dotenv
 asyncpg
-pip
-wheel
+beautifulsoup4
+lxml
