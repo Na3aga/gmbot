@@ -20,7 +20,10 @@ async def last_email(message: types.Message):
     email = args
     creds = tuple(await psqldb.get_gmail_creds(email=email))
     user_creds = gmail_API.make_user_creds(*creds)
-    messages = await gmail_API.messages_list(user_creds, 1)
+    messages = await gmail_API.messages_list(
+        user_creds=user_creds,
+        messages_num=1,
+    )
     messages = [gmail_API.get_text_attachments(msg) for msg in messages]
     for msg in messages:
         await message.answer(msg['text'])

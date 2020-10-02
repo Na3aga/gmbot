@@ -58,7 +58,7 @@ async def gauthorize_callback(request):
             request.rel_url.query.get('code')
         )
         logging.debug(user_creds)
-        email = await gmail_API.get_email_address(user_creds)
+        email = await gmail_API.get_email_address(user_creds=user_creds)
         chat_id = current_states[returned_state]['chat_id']
         chat_type = current_states[returned_state]['chat_type']
         logging.info(f"{email = }")

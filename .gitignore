@@ -5,3 +5,5 @@ token.json*
 token.pickle
 env/
 .vscode
+.env
+.idea/

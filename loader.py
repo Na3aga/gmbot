@@ -6,7 +6,7 @@ from DB import PostgreSQL
 
 current_states = {}
 
-gmail_API = Gmpart(CLIENT_CREDS)
+gmail_API = Gmpart().make(CLIENT_CREDS)
 
 """a bit unvertain about that
 uses low-level API of asyncio

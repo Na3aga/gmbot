@@ -1,7 +1,6 @@
 import logging
 import asyncio
 from aiogoogle import Aiogoogle
-from aiogoogle.auth.utils import create_secret
 from email import policy
 from email.parser import BytesParser
 from base64 import urlsafe_b64decode
@@ -26,8 +25,7 @@ class TelegramBeautifulSoup(BeautifulSoup):
             if isinstance(descendant, NavigableString) and descendant.parent.name in self.telegram_tags:
                 continue
             # default behavior
-            if (
-                (types is None and not isinstance(descendant, NavigableString))
+            if ((types is None and not isinstance(descendant, NavigableString))
                 or
                 (types is not None and type(descendant) not in types)):
                 continue
@@ -37,29 +35,46 @@ class TelegramBeautifulSoup(BeautifulSoup):
                     continue
             yield descendant
 
+
 class Gmpart():
     # TODO: save user_creds on exit from with
     # : try wrap all request to `async with as` in decorator
     # also try catch Bad Request (invalid user creds)
-    def __init__(self, CLIENT_CREDS):
-        """Init class with basic parameters
+
+    @classmethod
+    def make(cls, CLIENT_CREDS):
+        """
         Parameters:
         CLIENT_CREDS (dict): Your client credentials from google api in format
         """
+        self = Gmpart()
         self.CLIENT_CREDS = CLIENT_CREDS
-        self.state = create_secret()
-        self.__gmpart_api = None
+        return self
 
-    def authorize_uri(self, email):
+    def aiogoogle_creds(func):
+        """Add aiogoogle for every wrapped function
+        """
+        # WARNING: only for async functions!
+
+        async def decor(self, *args, **kwargs):
+            user_creds = kwargs.get('user_creds')
+            async with Aiogoogle(
+                client_creds=self.CLIENT_CREDS,
+                user_creds=user_creds
+            ) as aiogoogle:
+                return await func(self, aiogoogle, *args, **kwargs)
+        return decor
+
+    @aiogoogle_creds
+    async def authorize_uri(self, aiogoogle, email, state):
         """ Generate authozisation uri via aiogoogle's oauth wrapper
         Parameters:
-        email (str): IDK some login_hint
+        email (str): text will be put into email/username field
         """
-        aiogoogle = Aiogoogle(client_creds=self.CLIENT_CREDS)
         if aiogoogle.oauth2.is_ready(self.CLIENT_CREDS):
             uri = aiogoogle.oauth2.authorization_url(
                 client_creds=self.CLIENT_CREDS,
-                state=self.state,
+                state=state,
                 access_type='offline',
                 include_granted_scopes=True,
                 login_hint=email,
@@ -69,17 +84,17 @@ class Gmpart():
             raise Exception("Client doesn't have enough info for Oauth2")
         return uri
 
-    async def build_user_creds(self, code):
+    @aiogoogle_creds
+    async def build_user_creds(self, aiogoogle, code):
         """ Get user credentials with refresh token via secret code
         Parameters:
         email (str): IDK some login_hint
         """
-        async with Aiogoogle(client_creds=self.CLIENT_CREDS) as aiogoogle:
-            user_creds = await aiogoogle.oauth2.build_user_creds(
-                grant=code,
-                client_creds=self.CLIENT_CREDS
-            )
-            return user_creds
+        user_creds = await aiogoogle.oauth2.build_user_creds(
+            grant=code,
+            client_creds=self.CLIENT_CREDS
+        )
+        return user_creds
 
     def update_token(self, user_creds):
         # self.user_creds['access_token'] = user_creds['access_token']
@@ -92,16 +107,16 @@ class Gmpart():
         # so you don't need to refresh tocken by hand
 
     @property
-    async def gmpart_api(self):
+    @aiogoogle_creds
+    async def gmpart_api(self, aiogoogle):
         """ Get discover api of gmail.readonly
         """
-        if not self.__gmpart_api:
-            async with Aiogoogle(client_creds=self.CLIENT_CREDS) as aiogoogle:
-                # Downloads the API specs and creates an API object
-                self.__gmpart_api = await aiogoogle.discover('gmail', 'v1')
-        return self.__gmpart_api
+        # Downloads the API specs and creates an API object
+        return await aiogoogle.discover('gmail', 'v1')
 
-    async def get_gmail_message(self, user_creds, id, user_id='me', format='RAW'):
+    @aiogoogle_creds
+    async def get_gmail_message(self, aiogoogle, id, user_creds,
+                                user_id='me', format='RAW'):
         """ Ask google for a full message with specific ID
         Parameters:
         id (string): the ID of the message to retrieve.
@@ -110,17 +125,13 @@ class Gmpart():
         format (enum string MINIMAL|FULL|RAW|METADATA): the format
         to return the message in.
         """
-        async with Aiogoogle(
-            client_creds=self.CLIENT_CREDS,
-            user_creds=user_creds
-        ) as aiogoogle:
-            return await aiogoogle.as_user(
-                (await self.gmpart_api).users.messages.get(
-                    userId=user_id,
-                    id=id,
-                    format='RAW'
-                )
+        return await aiogoogle.as_user(
+            (await self.gmpart_api).users.messages.get(
+                userId=user_id,
+                id=id,
+                format='RAW'
             )
+        )
 
     @staticmethod
     async def make_email(future_message):
@@ -187,39 +198,40 @@ class Gmpart():
         return {"text": text,
                 "attachments": attachments}
 
-    async def get_email_address(self, user_creds):
+    @aiogoogle_creds
+    async def get_email_address(self, aiogoogle, user_creds):
         """ Get email adress of current account
         Parameters:
         user_creds (dict): user credentials
         """
-        async with Aiogoogle(
-            client_creds=self.CLIENT_CREDS,
-            user_creds=user_creds
-        ) as aiogoogle:
-            profile = await aiogoogle.as_user(
-                (await self.gmpart_api).users.getProfile(userId='me')
-            )
+        profile = await aiogoogle.as_user(
+            (await self.gmpart_api).users.getProfile(userId='me')
+        )
         return profile['emailAddress']
 
-    async def messages_list(self, user_creds, messages_num = 5):
+    @aiogoogle_creds
+    async def messages_list(self, aiogoogle, user_creds, messages_num=5):
         """ Get last messages_num emails as email.message object
         Parameters:
         messages_num (int): numbers of messages to be returned
         """
-        async with Aiogoogle(client_creds = self.CLIENT_CREDS, user_creds = user_creds) as aiogoogle:
-            messages_ids = await aiogoogle.as_user(
-                (await self.gmpart_api).users.messages.list(
-                    userId='me',
-                    labelIds='INBOX',
-                    includeSpamTrash=True,
-                    maxResults=messages_num))
-            raw_messages = []
-            for message in messages_ids['messages']:
-                raw_messages.append(self.get_gmail_message(user_creds, message['id']))
-            messages = []
-            for m in raw_messages:
-                # is there blocking?
-                messages.append(await self.make_email(m))
-            # TODO: find a way not to write this in the every `with as`
-            self.update_token(aiogoogle.user_creds)
+        messages_ids = await aiogoogle.as_user(
+            (await self.gmpart_api).users.messages.list(
+                userId='me',
+                labelIds='INBOX',
+                includeSpamTrash=True,
+                maxResults=messages_num))
+        raw_messages = []
+        for message in messages_ids['messages']:
+            raw_messages.append(
+                self.get_gmail_message(
+                    id=message['id'],
+                    user_creds=user_creds
+                )
+            )
+        messages = []
+        for m in raw_messages:
+            # is there blocking?
+            messages.append(await self.make_email(m))
+        self.update_token(aiogoogle.user_creds)
         return messages
