@@ -21,6 +21,7 @@ class DataBase():
         async def decor(self, *args, **kwargs):
             async with self.pool.acquire() as conn:
                 # TODO: make working transaction wrapper (? in separate func)
+                # try `return await func(self, conn, *args, **kwargs)` to be able to use *args
                 return await func(self, conn=conn, *args, **kwargs)
         return decor
 

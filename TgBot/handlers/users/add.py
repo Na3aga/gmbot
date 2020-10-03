@@ -1,12 +1,12 @@
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.builtin import Command
+from aiogoogle.auth.utils import create_secret
 
 from TgBot.loader import dp
 from TgBot.utils.misc import rate_limit
 from TgBot.states.add import AddGmail
-
-from loader import Gmpart, CLIENT_CREDS, current_states
+from loader import gmail_API, CLIENT_CREDS, current_states
 from re import match
 import logging
 
@@ -29,11 +29,10 @@ async def add(message: types.Message, state: FSMContext):
         await message.answer('Невідомий формат пошти')
         await state.finish()
         return
-    gmpart_api = Gmpart(CLIENT_CREDS)
-    state_account = gmpart_api.state
+    state_account = create_secret()
     chat_id = message.chat.id
     chat_type = message.chat.type
-    auth_uri = gmpart_api.authorize_uri(email)
+    auth_uri = await gmail_API.authorize_uri(email, state_account)
     text = 'Надайте доступ до читання повідомлень вашої пошти ' + auth_uri
     await message.answer(text)
     current_states.update(
