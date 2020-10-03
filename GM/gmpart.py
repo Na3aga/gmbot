@@ -35,10 +35,8 @@ class TelegramBeautifulSoup(BeautifulSoup):
                     continue
             yield descendant
 
-
-# decorator  
 def aiogoogle_creds(func):
-    """Add aiogoogle for every wrapped function
+    """Add aiogoogle with credentials for every wrapped function
     """
     # WARNING: only for async functions!
     async def decor(self, *args, **kwargs):
@@ -225,7 +223,6 @@ class Gmpart():
         for message in messages_ids['messages']:
             raw_messages.append(
                 self.get_gmail_message(
-                    aiogoogle= aiogoogle,
                     id=message['id'],
                     user_creds=user_creds
                 )
