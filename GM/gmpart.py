@@ -36,6 +36,20 @@ class TelegramBeautifulSoup(BeautifulSoup):
             yield descendant
 
 
+# decorator  
+def aiogoogle_creds(func):
+    """Add aiogoogle for every wrapped function
+    """
+    # WARNING: only for async functions!
+    async def decor(self, *args, **kwargs):
+        user_creds = kwargs.get('user_creds')
+        async with Aiogoogle(
+            client_creds=self.CLIENT_CREDS,
+            user_creds=user_creds
+        ) as aiogoogle:
+            return await func(self, aiogoogle, *args, **kwargs)
+    return decor
+
 class Gmpart():
     # TODO: save user_creds on exit from with
     # : try wrap all request to `async with as` in decorator
@@ -50,20 +64,6 @@ class Gmpart():
         self = Gmpart()
         self.CLIENT_CREDS = CLIENT_CREDS
         return self
-
-    def aiogoogle_creds(func):
-        """Add aiogoogle for every wrapped function
-        """
-        # WARNING: only for async functions!
-
-        async def decor(self, *args, **kwargs):
-            user_creds = kwargs.get('user_creds')
-            async with Aiogoogle(
-                client_creds=self.CLIENT_CREDS,
-                user_creds=user_creds
-            ) as aiogoogle:
-                return await func(self, aiogoogle, *args, **kwargs)
-        return decor
 
     @aiogoogle_creds
     async def authorize_uri(self, aiogoogle, email, state):
@@ -225,6 +225,7 @@ class Gmpart():
         for message in messages_ids['messages']:
             raw_messages.append(
                 self.get_gmail_message(
+                    aiogoogle= aiogoogle,
                     id=message['id'],
                     user_creds=user_creds
                 )
