@@ -1,6 +1,16 @@
 import asyncpg
 import logging
 
+def conn(func):
+        """
+        Add every connection to a connection pool
+        """
+        async def decor(self, *args, **kwargs):
+            async with self.pool.acquire() as conn:
+                # TODO: make working transaction wrapper (? in separate func)
+                # try `return await func(self, conn, *args, **kwargs)` to be able to use *args
+                return await func(self, conn=conn, *args, **kwargs)
+        return decor
 
 class DataBase():
     @classmethod
@@ -13,17 +23,6 @@ class DataBase():
         self.pool = await asyncpg.create_pool(DATABASE_URL)
         await self.create_db()
         return self
-
-    def conn(func):
-        """
-        Add every connection to a connection pool
-        """
-        async def decor(self, *args, **kwargs):
-            async with self.pool.acquire() as conn:
-                # TODO: make working transaction wrapper (? in separate func)
-                # try `return await func(self, conn, *args, **kwargs)` to be able to use *args
-                return await func(self, conn=conn, *args, **kwargs)
-        return decor
 
     @conn
     async def create_db(self, conn):
