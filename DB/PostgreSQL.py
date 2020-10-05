@@ -1,16 +1,19 @@
 import asyncpg
 import logging
+import ssl
+
 
 def conn(func):
-        """
-        Add every connection to a connection pool
-        """
-        async def decor(self, *args, **kwargs):
-            async with self.pool.acquire() as conn:
-                # TODO: make working transaction wrapper (? in separate func)
-                # try `return await func(self, conn, *args, **kwargs)` to be able to use *args
-                return await func(self, conn=conn, *args, **kwargs)
-        return decor
+    """
+    Add every connection to a connection pool
+    """
+    async def decor(self, *args, **kwargs):
+        async with self.pool.acquire() as conn:
+            # TODO: make working transaction wrapper (? in separate func)
+            # try `return await func(self, conn, *args, **kwargs)` to be able to use *args
+            return await func(self, conn=conn, *args, **kwargs)
+    return decor
+
 
 class DataBase():
     @classmethod
@@ -20,7 +23,10 @@ class DataBase():
         also create db if not exists
         """
         self = DataBase()
-        self.pool = await asyncpg.create_pool(DATABASE_URL)
+        ctx = ssl.create_default_context(cafile='concatenated.pem')
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        self.pool = await asyncpg.create_pool(DATABASE_URL, ssl=ctx)
         await self.create_db()
         return self
 
