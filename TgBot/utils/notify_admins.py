@@ -5,19 +5,10 @@ from aiogram import Dispatcher
 from config import admins
 
 
-async def on_startup_notify(dp: Dispatcher):
+async def admins_notify(dp: Dispatcher, text="Я працюю!"):
     for admin in admins:
         try:
-            await dp.bot.send_message(admin, "Я працюю!")
-
-        except Exception as err:
-            logging.exception(err)
-
-
-async def on_shutdown_notify(dp: Dispatcher):
-    for admin in admins:
-        try:
-            await dp.bot.send_message(admin, "Я завершую роботу!")
+            await dp.bot.send_message(admin, text)
 
         except Exception as err:
             logging.exception(err)
