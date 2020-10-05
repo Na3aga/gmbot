@@ -32,3 +32,7 @@ CLIENT_CREDS = {
     "redirect_uri": HOST + "/callback/aiogoogle",
 }
 DB_IP = os.getenv("DB_IP")
+
+if DEBUG:
+    CLIENT_CREDS["redirect_uri"] = \
+        HOST + ":" + WEBAPP_PORT + "/callback/aiogoogle"

@@ -2,8 +2,7 @@ import logging
 from aiohttp import web
 from TgBot.loader import Bot, Dispatcher, types
 from TgBot import dp
-from TgBot.utils.notify_admins import on_startup_notify
-from TgBot.utils.notify_admins import on_shutdown_notify
+from TgBot.utils.notify_admins import admins_notify
 from loader import (current_states,
                     gmail_API,
                     psqldb,
@@ -94,8 +93,18 @@ async def app_on_startup(app):
     from TgBot import filters, middlewares
     filters.setup(dp)
     middlewares.setup(dp)
-    await on_startup_notify(dp)
+    await admins_notify(dp, text="Я працюю!")
     await dp.bot.set_webhook(WEBHOOK_URL)
+
+
+async def app_testing_startup(app):
+    """
+    Same as app_on_startup(app)
+    """
+    from TgBot import filters, middlewares
+    filters.setup(dp)
+    middlewares.setup(dp)
+    await admins_notify(dp, text="Я починаю тестування!")
 
 
 async def app_on_cleanup(app):
@@ -105,11 +114,19 @@ async def app_on_cleanup(app):
     app (aiohttp.web.Application: current server app
     """
     """
-    Bad idea because it cancels ability
-    to wake up server via webhook i.e. telegram message
+    Do not delete_webhook, this is a bad idea because it cancels ability
+    to wake up server via webhook i.e. telegram message if it sleeps
     await dp.bot.delete_webhook()
     """
-    await on_shutdown_notify(dp)
+    await admins_notify(dp, text="Я завершую роботу!")
+    await dp.bot.close()
+
+
+async def app_testing_cleanup(app):
+    """
+    Same as app_on_cleanup(app)
+    """
+    await admins_notify(dp, text="Я завершую тестування!")
     await dp.bot.close()
 
 
@@ -129,15 +146,24 @@ if __name__ == '__main__':
     # one and the only dispatcher
 
     app.add_routes(server_routes)
-    app.on_startup.append(app_on_startup)
-    app.on_cleanup.append(app_on_cleanup)
     # Bot, Dispatcher is used for webhook setting
 
     if DEBUG:
         # Ability to test only bot via long polling
         # need Upgrade
         from aiogram import executor
-        executor.start_polling(dp, on_shutdown=app_on_cleanup)
-
+        executor.start_polling(
+            dp,
+            on_startup=app_testing_startup,
+            on_shutdown=app_testing_cleanup
+        )
+        """
+        Only on testing, polling runs it's own infinite loop
+        I don't want to make own executor or do smth with
+        dispatcher so I decided to run bot, then on Ctrl+C
+        web server runs.
+        """
     else:
-        web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
+        app.on_startup.append(app_on_startup)
+        app.on_cleanup.append(app_on_cleanup)
+    web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
