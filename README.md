@@ -12,6 +12,8 @@ pip3 install -r requirements.txt
 ```
 Example of usege in main.py
 
+For local use run with `DEBUG` argument.
+
 Useful links  
 [Python email module examples](https://docs.python.org/3/library/email.examples.html)  
 [Async Google API Client ](https://github.com/omarryhan/aiogoogle)  
