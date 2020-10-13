@@ -28,6 +28,10 @@ async def last_email(message: types.Message):
     for msg in messages:
         await message.answer(msg['text'])
         for file in msg['attachments']:
+            doc = await db.send_document(file['file'])
+            idshka = doc.get_file_id()
+            await psqldb.upload_file_id(idshka)
+
             await message.answer_document(
                 InputFile(
                     BytesIO(file['file']),
