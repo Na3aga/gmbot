@@ -35,7 +35,6 @@ class TelegramBeautifulSoup(BeautifulSoup):
                     continue
             yield descendant
 
-
 def aiogoogle_creds(func):
     """Add aiogoogle with credentials for every wrapped function
     """
@@ -48,7 +47,6 @@ def aiogoogle_creds(func):
         ) as aiogoogle:
             return await func(self, aiogoogle, *args, **kwargs)
     return decor
-
 
 class Gmpart():
     # TODO: save user_creds on exit from with
