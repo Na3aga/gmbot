@@ -17,6 +17,8 @@ HOST = os.getenv('HOST')
 WEBHOOK_PATH = "/webhook/lewis/"
 WEBHOOK_URL = f"{HOST}{WEBHOOK_PATH}"
 
+GMAIL_PUSH_PATH = "/webhook/gmail/"
+
 # Telegram admins
 admins = [
     os.getenv("ADMIN_ID"),

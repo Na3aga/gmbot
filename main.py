@@ -10,7 +10,8 @@ from loader import (current_states,
                     WEBHOOK_PATH,
                     WEBAPP_HOST,
                     WEBAPP_PORT,
-                    DEBUG)
+                    DEBUG,
+                    GMAIL_PUSH_PATH)
 
 
 app = web.Application()
@@ -36,6 +37,12 @@ async def bot_handler(request: web.Request):
         logging.error(err)
     finally:
         return web.Response(text='OK')
+
+
+async def gmail_pubsub_push(request: web.Request):
+    """Will be handling webhooks from gmail
+    """
+    return web.Response(text='OK')
 
 
 async def gauthorize_callback(request):
@@ -134,6 +141,7 @@ server_routes = [
     web.get('/', index_html),
     web.get('/answers', answers_html),
     web.post(path=WEBHOOK_PATH, handler=bot_handler),
+    web.post(path=GMAIL_PUSH_PATH, handler=gmail_pubsub_push),
     web.get(path='/callback/aiogoogle', handler=gauthorize_callback)]
 
 # On startup server
