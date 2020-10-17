@@ -42,6 +42,7 @@ async def bot_handler(request: web.Request):
 async def gmail_pubsub_push(request: web.Request):
     """Will be handling webhooks from gmail
     """
+    logging.info(str(await request.json()))
     return web.Response(text='OK')
 
 
