@@ -233,3 +233,33 @@ class Gmpart():
             messages.append(await self.make_email(m))
         self.update_token(aiogoogle.user_creds)
         return messages
+
+    @aiogoogle_creds
+    async def start_watch(self, aiogoogle, user_creds, email):
+        """
+        Sends watch request
+        """
+        request_data = {
+            "labelIds": ["INBOX"],
+            "labelFilterAction": "INCLUDE",
+            "topicName": "projects/gmbot-1598202290031/topics/mail-updates"
+        }
+        return await aiogoogle.as_user(
+            (await self.gmpart_api).users.watch(
+                userId=email,
+                json=request_data
+            )
+        )
+
+    @aiogoogle_creds
+    async def read_history(self, aiogoogle, user_creds, email, history_id):
+        """
+        Read event from email with history_id
+        """
+        return await aiogoogle.as_user(
+            (await self.gmpart_api).users.history.list(
+                userId=email,
+                maxResults=1,
+                startHistoryId=str(history_id)
+            )
+        )

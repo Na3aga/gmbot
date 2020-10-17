@@ -113,6 +113,12 @@ async def app_testing_startup(app):
     filters.setup(dp)
     middlewares.setup(dp)
     await admins_notify(dp, text="Я починаю тестування!")
+    # TODO: delete this
+    # email = ''
+    # creds = tuple(await psqldb.get_gmail_creds(email=email))
+    # user_creds = gmail_API.make_user_creds(*creds)
+    # hist = await gmail_API.read_history(user_creds=user_creds, email=email, history_id=1264785)
+    # logging.info(str(hist))
 
 
 async def app_on_cleanup(app):
