@@ -1,6 +1,5 @@
 from aiogram import types
 from aiogram.dispatcher.filters.builtin import Command
-from aiogram.types.input_file import InputFile
 from TgBot.loader import dp
 from TgBot.utils.misc import rate_limit
 from loader import gmail_API, psqldb
@@ -29,7 +28,7 @@ async def last_email(message: types.Message):
         await message.answer(msg['text'])
         for file in msg['attachments']:
             await message.answer_document(
-                InputFile(
+                types.input_file.InputFile(
                     BytesIO(file['file']),
                     filename=file['filename']
                 )
