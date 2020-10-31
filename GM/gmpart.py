@@ -164,7 +164,7 @@ class Gmpart():
         }
 
     @staticmethod
-    def get_text_attachments(msg, split_size = 4096):
+    def get_text_attachments(msg, split_size=4096):
         """Get email text in html and attachments
         """
         import mimetypes
