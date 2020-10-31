@@ -26,7 +26,8 @@ async def last_email(message: types.Message):
     )
     messages = [gmail_API.get_text_attachments(msg) for msg in messages]
     for msg in messages:
-        await message.answer(msg['text'])
+        for text in msg['text_list']:
+            await message.answer(text)
         for file in msg['attachments']:
             await message.answer_document(
                 InputFile(
