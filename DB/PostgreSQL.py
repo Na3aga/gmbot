@@ -15,7 +15,7 @@ def conn(func):
     return decor
 
 
-class DataBase():
+class DataBase:
     @classmethod
     async def connect(cls, DATABASE_URL):
         """
