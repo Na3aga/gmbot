@@ -185,5 +185,3 @@ if __name__ == '__main__':
         app.on_startup.append(app_on_startup)
         app.on_cleanup.append(app_on_cleanup)
         web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
-
-
