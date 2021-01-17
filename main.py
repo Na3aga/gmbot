@@ -162,23 +162,28 @@ if __name__ == '__main__':
 
     app.add_routes(server_routes)
     # Bot, Dispatcher is used for webhook setting
-
     if DEBUG:
-        # Ability to test only bot via long polling
-        # need Upgrade
         from aiogram import executor
-        executor.start_polling(
+        """
+        From the inside of an executor
+        Same as start_polling but with our web server
+        Just use of same server that uses aiogram under the hood
+        """
+        exec = executor.Executor(
             dp,
-            on_startup=app_testing_startup,
-            on_shutdown=app_testing_cleanup
+            check_ip=False,
         )
-        """
-        Only on testing, polling runs it's own infinite loop
-        I don't want to make own executor or do smth with
-        dispatcher so I decided to run bot, then on Ctrl+C
-        web server runs.
-        """
+        executor._setup_callbacks(exec, app_testing_startup, app_testing_cleanup)
+        exec.set_web_app(app)
+        exec.start_polling(
+            reset_webhook=True,
+            timeout=20,
+            relax=0.1,
+            fast=True,
+        )
     else:
         app.on_startup.append(app_on_startup)
         app.on_cleanup.append(app_on_cleanup)
-    web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
+        web.run_app(app, host=WEBAPP_HOST, port=WEBAPP_PORT)
+
+

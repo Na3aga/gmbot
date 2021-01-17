@@ -1,5 +1,6 @@
 import logging
 import asyncio
+from math import ceil
 from aiogoogle import Aiogoogle
 from email import policy
 from email.parser import BytesParser
@@ -163,7 +164,7 @@ class Gmpart():
         }
 
     @staticmethod
-    def get_text_attachments(msg):
+    def get_text_attachments(msg, split_size=4096):
         """Get email text in html and attachments
         """
         import mimetypes
@@ -193,7 +194,14 @@ class Gmpart():
             #     f.write(part.get_content())
             attachments.append({"filename": filename,
                                 "file": part.get_content()})
-        return {"text": text,
+        text_list = []
+        if split_size:
+            for i in range(ceil(len(text)/split_size)):
+                text_list.append(text[split_size*i:split_size*(i+1)])
+        else:
+            text_list.append(text)
+
+        return {"text_list": text_list,
                 "attachments": attachments}
 
     @aiogoogle_creds
