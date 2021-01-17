@@ -4,9 +4,11 @@ from math import ceil
 from aiogoogle import Aiogoogle
 from email import policy
 from email.parser import BytesParser
+import email.message
 from base64 import urlsafe_b64decode
 from bs4 import BeautifulSoup, NavigableString, CData, Tag
 from html import escape
+from loader import GMAIL_PUBSUB_TOPIC_NAME
 
 
 class TelegramBeautifulSoup(BeautifulSoup):
@@ -118,34 +120,36 @@ class Gmpart():
                                 user_id='me', format='RAW'):
         """ Ask google for a full message with specific ID
         Parameters:
-        id (string): the ID of the message to retrieve.
-        userId (string): the user's email address. The special value `me` can
-        be used to indicate the authenticated user.
-        format (enum string MINIMAL|FULL|RAW|METADATA): the format
-        to return the message in.
+            id (string): the ID of the message to retrieve.
+            user_id (string): the user's email address. The special value `me` can
+                be used to indicate the authenticated user.
+            format (enum string MINIMAL|FULL|RAW|METADATA): the format
+                to return the message in.
         """
         return await aiogoogle.as_user(
             (await self.gmpart_api).users.messages.get(
                 userId=user_id,
                 id=id,
-                format='RAW'
+                format=format
             )
         )
 
     @staticmethod
-    async def make_email(future_message):
+    async def make_email(future_message) -> email.message.Message:
         """ Make email from future base64 encoded raw message
         Parameters:
-        future_message (coroutine): base64 encoded raw message
-            (maybe RFC 2822)
+            future_message (coroutine): base64 encoded raw message
+                (maybe RFC 2822)
         """
-        return BytesParser(
+        print(type(future_message))
+        parsed_email = BytesParser(
             policy=policy.default
         ).parsebytes(
             urlsafe_b64decode(
                 (await future_message)['raw']
             )
         )
+        return parsed_email
 
     @staticmethod
     def make_user_creds(access_token, refresh_token, expires_at):
@@ -216,10 +220,10 @@ class Gmpart():
         return profile['emailAddress']
 
     @aiogoogle_creds
-    async def messages_list(self, aiogoogle, user_creds, messages_num=5):
+    async def messages_list(self, aiogoogle, user_creds, messages_num: int = 5) -> list[email.message.Message]:
         """ Get last messages_num emails as email.message object
         Parameters:
-        messages_num (int): numbers of messages to be returned
+            messages_num (int): numbers of messages to be returned
         """
         messages_ids = await aiogoogle.as_user(
             (await self.gmpart_api).users.messages.list(
@@ -239,6 +243,7 @@ class Gmpart():
         for m in raw_messages:
             # is there blocking?
             messages.append(await self.make_email(m))
+
         self.update_token(aiogoogle.user_creds)
         return messages
 
@@ -250,7 +255,7 @@ class Gmpart():
         request_data = {
             "labelIds": ["INBOX"],
             "labelFilterAction": "INCLUDE",
-            "topicName": "projects/gmbot-1598202290031/topics/mail-updates"
+            "topicName": GMAIL_PUBSUB_TOPIC_NAME
         }
         return await aiogoogle.as_user(
             (await self.gmpart_api).users.watch(
