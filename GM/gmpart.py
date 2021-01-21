@@ -139,9 +139,8 @@ class Gmpart():
         """ Make email from future base64 encoded raw message
         Parameters:
             future_message (coroutine): base64 encoded raw message
-                (maybe RFC 2822)
+                (maybe RFC 2822 or RFC 822)
         """
-        print(type(future_message))
         parsed_email = BytesParser(
             policy=policy.default
         ).parsebytes(
@@ -220,10 +219,13 @@ class Gmpart():
         return profile['emailAddress']
 
     @aiogoogle_creds
-    async def messages_list(self, aiogoogle, user_creds, messages_num: int = 5) -> list[email.message.Message]:
+    async def messages_list(self, aiogoogle, user_creds, messages_num: int = 5):
         """ Get last messages_num emails as email.message object
         Parameters:
             messages_num (int): numbers of messages to be returned
+
+        Returns:
+            List[email.message.Message]: List of messages in python email lib
         """
         messages_ids = await aiogoogle.as_user(
             (await self.gmpart_api).users.messages.list(
@@ -261,6 +263,17 @@ class Gmpart():
             (await self.gmpart_api).users.watch(
                 userId=email,
                 json=request_data
+            )
+        )
+
+    @aiogoogle_creds
+    async def stop_watch(self, aiogoogle, user_creds, email):
+        """
+        Stop receiving notifications
+        """
+        return await aiogoogle.as_user(
+            (await self.gmpart_api).users.stop(
+                userId=email
             )
         )
 
