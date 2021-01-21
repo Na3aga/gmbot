@@ -12,7 +12,8 @@ from loader import (current_states,
                     WEBAPP_PORT,
                     DEBUG,
                     GMAIL_PUSH_PATH)
-
+from base64 import urlsafe_b64decode
+import json
 
 app = web.Application()
 
@@ -43,10 +44,28 @@ async def gmail_pubsub_push(request: web.Request):
     """Will be handling webhooks from gmail
     """
     logging.info(str(await request.json()))
+    notification_data = request.rel_url.query.get('data')
+    if notification_data:
+        update = json.loads(
+            urlsafe_b64decode(notification_data).decode('utf-8')
+        )
+        email = update["email"]
+        history_id = update["historyId"]
+        creds = tuple(await psqldb.get_gmail_creds(email=email))
+        user_creds = gmail_API.make_user_creds(*creds)
+        hist = await gmail_API.read_history(user_creds=user_creds,
+                                            email=email,
+                                            history_id=history_id)
+        logging.info(str(hist))
+        # TODO: https://developers.google.com/gmail/api/reference/rest/v1/users.history/list
+        # ON new messages -- send it to all the watched chats linked with this email
+
+
     return web.Response(text='OK')
+    # TODO: delete this
 
 
-async def gauthorize_callback(request):
+async def gauthorize_callback(request: web.Request):
     """Receive user creds from google auth redirect
     """
     # need more tests to find how to catch the error
@@ -92,11 +111,12 @@ async def gauthorize_callback(request):
             text="Something's probably wrong with your callback")
 
 
-async def app_on_startup(app):
+
+async def app_on_startup(app: web.Application):
     """
     Work before server startup
     Parameters:
-    app (aiohttp.web.Application: current server app
+        app (aiohttp.web.Application: current server app
     """
     from TgBot import filters, middlewares
     filters.setup(dp)
@@ -105,7 +125,7 @@ async def app_on_startup(app):
     await dp.bot.set_webhook(WEBHOOK_URL)
 
 
-async def app_testing_startup(app):
+async def app_testing_startup(app: web.Application):
     """
     Same as app_on_startup(app)
     """
@@ -113,19 +133,13 @@ async def app_testing_startup(app):
     filters.setup(dp)
     middlewares.setup(dp)
     await admins_notify(dp, text="Я починаю тестування!")
-    # TODO: delete this
-    # email = ''
-    # creds = tuple(await psqldb.get_gmail_creds(email=email))
-    # user_creds = gmail_API.make_user_creds(*creds)
-    # hist = await gmail_API.read_history(user_creds=user_creds, email=email, history_id=1264785)
-    # logging.info(str(hist))
 
 
-async def app_on_cleanup(app):
+async def app_on_cleanup(app: web.Application):
     """
     Graceful shutdown work
     Parameters:
-    app (aiohttp.web.Application: current server app
+        app (aiohttp.web.Application): current server app
     """
     """
     Do not delete_webhook, this is a bad idea because it cancels ability
@@ -136,7 +150,7 @@ async def app_on_cleanup(app):
     await dp.bot.close()
 
 
-async def app_testing_cleanup(app):
+async def app_testing_cleanup(app: web.Application):
     """
     Same as app_on_cleanup(app)
     """
