@@ -63,7 +63,8 @@ CREATE TABLE IF NOT EXISTS watched_emails
 
 CREATE TABLE IF NOT EXISTS watched_chat_emails
 (
-    chat_id BIGINT REFERENCES chat (id) ON DELETE CASCADE,
-    email   VARCHAR(128) REFERENCES gmail (email) ON DELETE CASCADE,
-    CONSTRAINT watched_chat_id_email PRIMARY KEY (chat_id, email)
+    chat_id BIGINT NOT NULL,
+    email   VARCHAR(128) NOT NULL,
+    CONSTRAINT watched_chat_id_email FOREIGN KEY (chat_id, email) REFERENCES chat_gmail (chat_id, email) ON DELETE CASCADE
 );
+
