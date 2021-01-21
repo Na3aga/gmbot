@@ -26,17 +26,33 @@ async def start_watch_email(message: types.Message):
 @dp.message_handler(state=WatchGmail.Add)
 async def add(message: types.Message, state: FSMContext):
     email = message.text.strip()
+    chat_id = message.chat.id
     if not match(r'^[\w\.-]+@gmail\.com$', email):
         logging.info(f"Mail {email} was rejected")
         await message.answer('Невідомий формат пошти')
-        await state.finish()
-        return
-    # TODO: check if that email is attached to the chat
-    # TODO: if so -- add to the watchlist to handle new emails
-    creds = tuple(await psqldb.get_gmail_creds(email=email))
-    user_creds = gmail_API.make_user_creds(*creds)
-    watch_response = await gmail_API.start_watch(user_creds=user_creds, email=email)
-    logging.info(str(watch_response))
-    if watch_response:
-        await message.answer("Пошта додана")
+    else:
+        # TODO: check if that email is attached to the chat
+        match_email_chat = await psqldb.email_in_chat(email=email,
+                                                      chat_id=chat_id)
+        if not match_email_chat:
+            await message.answer(f'Пошта {email} не додана до чату')
+        else:
+            # TODO: if so -- add to the watchlist to handle new emails
+            await psqldb.add_watched_chat_emails(email=email, chat_id=chat_id)
+            is_email_watched = await psqldb.email_watched(email=email)
+            # TODO: if email already watched -- just add to the chat, not watch
+            if not is_email_watched:
+                creds = tuple(await psqldb.get_gmail_creds(email=email))
+                user_creds = gmail_API.make_user_creds(*creds)
+                watch_response = await gmail_API.start_watch(
+                    user_creds=user_creds,
+                    email=email)
+                logging.info(str(watch_response))
+                if watch_response:
+                    await psqldb.add_watched_email(email=email)
+                    await message.answer(f'Пошта {email} додана до чату')
+                else:
+                    await message.answer(f'Проблеми з додаванням пошти')
+            else:
+                await message.answer(f'Пошта {email} додана до чату')
     await state.finish()
