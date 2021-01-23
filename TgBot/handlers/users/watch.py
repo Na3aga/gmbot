@@ -49,7 +49,7 @@ async def add(message: types.Message, state: FSMContext):
                     email=email)
                 logging.info(str(watch_response))
                 if watch_response:
-                    await psqldb.add_watched_email(email=email)
+                    await psqldb.watch_email(email=email)
                     await message.answer(f'Пошта {email} додана до чату')
                 else:
                     await message.answer(f'Проблеми з додаванням пошти')

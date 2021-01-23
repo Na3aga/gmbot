@@ -153,7 +153,7 @@ class DataBase:
         )
 
     @conn
-    async def add_watched_email(self, conn, email) -> asyncpg.Record:
+    async def watch_email(self, conn, email):
         """
         Adding already existing email from 'gmail' table to 'watched_emails' with timestamp
         Args:
