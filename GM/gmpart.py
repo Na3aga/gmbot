@@ -219,7 +219,8 @@ class Gmpart():
         return profile['emailAddress']
 
     @aiogoogle_creds
-    async def messages_list(self, aiogoogle, user_creds, messages_num: int = 5):
+    async def messages_list(self, aiogoogle, user_creds,
+                            messages_num: int = 5):
         """ Get last messages_num emails as email.message object
         Parameters:
             messages_num (int): numbers of messages to be returned
@@ -250,7 +251,8 @@ class Gmpart():
         return messages
 
     @aiogoogle_creds
-    async def start_watch(self, aiogoogle, user_creds, email):
+    async def start_watch(self, aiogoogle, user_creds,
+                          email):
         """
         Sends watch request
         """
@@ -267,7 +269,8 @@ class Gmpart():
         )
 
     @aiogoogle_creds
-    async def stop_watch(self, aiogoogle, user_creds, email):
+    async def stop_watch(self, aiogoogle, user_creds,
+                         email):
         """
         Stop receiving notifications
         """
@@ -278,14 +281,22 @@ class Gmpart():
         )
 
     @aiogoogle_creds
-    async def read_history(self, aiogoogle, user_creds, email, history_id):
+    async def read_history(self, aiogoogle, user_creds,
+                           email: str, history_id: int, max_results: int = 1,
+                           label_id: str = "INBOX",
+                           history_types: enumerate = ["MESSAGE_ADDED"]):
         """
         Read event from email with history_id
         """
+        request_data = {
+            "maxResults": max_results,
+            "startHistoryId": history_id,
+            "labelId": label_id,
+            "historyTypes": history_types,
+        }
         return await aiogoogle.as_user(
             (await self.gmpart_api).users.history.list(
                 userId=email,
-                maxResults=1,
-                startHistoryId=str(history_id)
+                json=request_data,
             )
         )

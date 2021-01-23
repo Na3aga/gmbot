@@ -44,18 +44,21 @@ async def gmail_pubsub_push(request: web.Request):
     """Will be handling webhooks from gmail
     """
     logging.info(str(await request.json()))
-    notification_data = request.rel_url.query.get('data')
-    if notification_data:
+    for k, v in request.rel_url.query.items():
+        logging.info("@ "+str(k)+" : "+str(v))
+    if request.rel_url.query.get('message'):
+        notification_data = request.query['message']['data']
         update = json.loads(
             urlsafe_b64decode(notification_data).decode('utf-8')
         )
-        email = update["email"]
-        history_id = update["historyId"]
+        email: str = update["email"]
+        history_id: int = update["historyId"]
         creds = tuple(await psqldb.get_gmail_creds(email=email))
         user_creds = gmail_API.make_user_creds(*creds)
         hist = await gmail_API.read_history(user_creds=user_creds,
                                             email=email,
-                                            history_id=history_id)
+                                            history_id=str(history_id),
+                                            history_types=["MESSAGE_ADDED", "LABEL_ADDED"])
         logging.info(str(hist))
         # TODO: https://developers.google.com/gmail/api/reference/rest/v1/users.history/list
         # ON new messages -- send it to all the watched chats linked with this email
