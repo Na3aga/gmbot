@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Callable, Awaitable
 
 import asyncpg
 import logging
@@ -87,7 +87,7 @@ class DataBase:
             chat_id)
 
     @conn
-    async def get_gmail_creds(self, conn, email) -> asyncpg.Record:
+    async def get_gmail_creds(self, conn, email: str) -> asyncpg.Record:
         """
         Get user credentials with that email
         Args:
@@ -103,7 +103,7 @@ class DataBase:
             email)
 
     @conn
-    async def email_in_chat(self, conn, email, chat_id) -> asyncpg.Record:
+    async def email_in_chat(self, conn, email: str, chat_id: int) -> asyncpg.Record:
         """
         Get email, chat if they are linked in 'chat_gmail' table
         Args:
@@ -122,7 +122,7 @@ class DataBase:
             email, chat_id)
 
     @conn
-    async def add_watched_chat_emails(self, conn, email, chat_id):
+    async def add_watched_chat_emails(self, conn, email: str, chat_id: int):
         """
         Adding already linked chat and email from 'chat_gmail' table to watched_chat_emails
         Args:
@@ -138,7 +138,7 @@ class DataBase:
             email, chat_id)
 
     @conn
-    async def remove_watched_chat_emails(self, conn, email, chat_id):
+    async def remove_watched_chat_emails(self, conn, email: str, chat_id: int):
         """
         Remove chat and email from watched_chat_emails
         Args:
@@ -152,7 +152,7 @@ class DataBase:
             email, chat_id)
 
     @conn
-    async def email_watched(self, conn, email) -> asyncpg.Record:
+    async def email_watched(self, conn, email: str) -> asyncpg.Record:
         """
         Get email if it 'watched_emails' table
         Args:
@@ -170,7 +170,7 @@ class DataBase:
         )
 
     @conn
-    async def watch_email(self, conn, email):
+    async def watch_email(self, conn, email: str):
         """
         Adding already existing email from 'gmail' table to 'watched_emails' with timestamp
         Args:
@@ -186,7 +186,7 @@ class DataBase:
         )
 
     @conn
-    async def remove_watch_email(self, conn, email):
+    async def remove_watch_email(self, conn, email: str):
         """
         Remove email from 'watched_emails'
         Args:
@@ -200,7 +200,7 @@ class DataBase:
         )
 
     @conn
-    async def get_watched_chats(self, conn, email) -> List[asyncpg.Record]:
+    async def get_watched_chats(self, conn, email: str) -> List[asyncpg.Record]:
         """
         Get list of all watched chats with given email
         Args:
