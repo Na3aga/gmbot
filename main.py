@@ -137,6 +137,14 @@ async def app_testing_startup(app: web.Application):
     middlewares.setup(dp)
     await admins_notify(dp, text="Я починаю тестування!")
 
+    # WEBAPP DEBUG RUN
+    await runner.setup()
+    # Host must be without http://
+    site = web.TCPSite(runner, "localhost", WEBAPP_PORT)
+    await site.start()
+    logging.info("App running at " + HOST + ":" + WEBAPP_PORT)
+
+
 
 async def app_on_cleanup(app: web.Application):
     """
@@ -159,6 +167,7 @@ async def app_testing_cleanup(app: web.Application):
     """
     await admins_notify(dp, text="Я завершую тестування!")
     await dp.bot.close()
+    await runner.cleanup()
 
 
 server_routes = [
@@ -186,6 +195,8 @@ if __name__ == '__main__':
         Same as start_polling but with our web server
         Just use of same server that uses aiogram under the hood
         """
+        runner = web.AppRunner(app)
+
         exec = executor.Executor(
             dp,
             check_ip=False,
