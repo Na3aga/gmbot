@@ -49,6 +49,7 @@ async def gmail_pubsub_push(request: web.Request):
     if request.content_length > MAX_SIZE:
         raise web.HTTPRequestEntityTooLarge(MAX_SIZE, request.content_length)
     request_data = await request.json()
+    logging.info(str(request_data))
     if request_data.get('message'):
         notification_data = request_data['message']['data']
         update = json.loads(
@@ -62,8 +63,8 @@ async def gmail_pubsub_push(request: web.Request):
                                             email=email,
                                             history_id=str(history_id),
                                             history_type="MESSAGE_ADDED")
-        if hist:
-            logging.info(str(hist))
+        logging.info(str(hist))
+        if hist.get("history"):
             message_id = hist["history"][0]["messages"][0]["id"]
             creds = tuple(await psqldb.get_gmail_creds(email=email))
             user_creds = gmail_API.make_user_creds(*creds)
