@@ -138,6 +138,20 @@ class DataBase:
             email, chat_id)
 
     @conn
+    async def remove_watched_chat_emails(self, conn, email, chat_id):
+        """
+        Remove chat and email from watched_chat_emails
+        Args:
+            same as in email_in_chat()
+        """
+        await conn.execute(
+            """delete
+            from watched_chat_emails
+            where email = $1
+              and chat_id = $2""",
+            email, chat_id)
+
+    @conn
     async def email_watched(self, conn, email) -> asyncpg.Record:
         """
         Get email if it 'watched_emails' table
@@ -168,6 +182,20 @@ class DataBase:
             values ((select email from gmail where gmail.email = $1), now())
             on conflict do nothing
             """,
+            email
+        )
+
+    @conn
+    async def remove_watch_email(self, conn, email):
+        """
+        Remove email from 'watched_emails'
+        Args:
+            same as in email_watched()
+        """
+        await conn.execute(
+            """delete
+            from watched_emails
+            where email = $1""",
             email
         )
 

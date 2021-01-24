@@ -35,7 +35,9 @@ async def add(message: types.Message, state: FSMContext):
         match_email_chat = await psqldb.email_in_chat(email=email,
                                                       chat_id=chat_id)
         if not match_email_chat:
-            await message.answer(f'Пошта {email} не додана до чату')
+            await message.answer(
+                f'Не вдалося додати сповіщення від пошти {email}'
+            )
         else:
             # TODO: if so -- add to the watchlist to handle new emails
             await psqldb.add_watched_chat_emails(email=email, chat_id=chat_id)
@@ -50,9 +52,12 @@ async def add(message: types.Message, state: FSMContext):
                 logging.info(str(watch_response))
                 if watch_response:
                     await psqldb.watch_email(email=email)
-                    await message.answer(f'Пошта {email} додана до чату')
+                    await message.answer(
+                        f'Сповіщення від пошти {email} додані до чату')
                 else:
-                    await message.answer(f'Проблеми з додаванням пошти')
+                    await message.answer(
+                        f'Не вдалося додати сповіщення від пошти {email}'
+                    )
             else:
                 await message.answer(f'Пошта {email} додана до чату')
     await state.finish()
