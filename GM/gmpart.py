@@ -284,7 +284,7 @@ class Gmpart():
     async def read_history(self, aiogoogle, user_creds,
                            email: str, history_id: int, max_results: int = 1,
                            label_id: str = "INBOX",
-                           history_type: enumerate = "MESSAGE_ADDED"):
+                           history_type: enumerate = None):
         """
         Read event from email with history_id
         """

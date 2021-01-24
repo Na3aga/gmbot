@@ -62,8 +62,7 @@ async def gmail_pubsub_push(request: web.Request):
         hist = await gmail_API.read_history(user_creds=user_creds,
                                             email=email,
                                             history_id=str(history_id),
-                                            history_type="MESSAGE_ADDED")
-        logging.info(str(hist))
+                                            history_type=None)
         if hist.get("history"):
             message_id = hist["history"][0]["messages"][0]["id"]
             creds = tuple(await psqldb.get_gmail_creds(email=email))
