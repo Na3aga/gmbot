@@ -284,19 +284,16 @@ class Gmpart():
     async def read_history(self, aiogoogle, user_creds,
                            email: str, history_id: int, max_results: int = 1,
                            label_id: str = "INBOX",
-                           history_types: enumerate = ["MESSAGE_ADDED"]):
+                           history_type: enumerate = "MESSAGE_ADDED"):
         """
         Read event from email with history_id
         """
-        request_data = {
-            "maxResults": max_results,
-            "startHistoryId": history_id,
-            "labelId": label_id,
-            "historyTypes": history_types,
-        }
         return await aiogoogle.as_user(
             (await self.gmpart_api).users.history.list(
                 userId=email,
-                json=request_data,
+                maxResults=max_results,
+                startHistoryId=history_id,
+                labelId=label_id,
+                historyTypes=history_type,
             )
         )

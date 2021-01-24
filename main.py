@@ -1,4 +1,5 @@
 import logging
+from io import BytesIO
 from aiohttp import web
 from TgBot.loader import Bot, Dispatcher, types
 from TgBot import dp
@@ -8,6 +9,7 @@ from loader import (current_states,
                     psqldb,
                     WEBHOOK_URL,
                     WEBHOOK_PATH,
+                    HOST,
                     WEBAPP_HOST,
                     WEBAPP_PORT,
                     DEBUG,
@@ -43,29 +45,49 @@ async def bot_handler(request: web.Request):
 async def gmail_pubsub_push(request: web.Request):
     """Will be handling webhooks from gmail
     """
-    logging.info(str(await request.json()))
-    for k, v in request.rel_url.query.items():
-        logging.info("@ "+str(k)+" : "+str(v))
-    if request.rel_url.query.get('message'):
-        notification_data = request.query['message']['data']
+    MAX_SIZE = 26214400
+    if request.content_length > MAX_SIZE:
+        raise web.HTTPRequestEntityTooLarge(MAX_SIZE, request.content_length)
+    request_data = await request.json()
+    if request_data.get('message'):
+        notification_data = request_data['message']['data']
         update = json.loads(
             urlsafe_b64decode(notification_data).decode('utf-8')
         )
-        email: str = update["email"]
+        email: str = update["emailAddress"]
         history_id: int = update["historyId"]
         creds = tuple(await psqldb.get_gmail_creds(email=email))
         user_creds = gmail_API.make_user_creds(*creds)
         hist = await gmail_API.read_history(user_creds=user_creds,
                                             email=email,
                                             history_id=str(history_id),
-                                            history_types=["MESSAGE_ADDED", "LABEL_ADDED"])
-        logging.info(str(hist))
-        # TODO: https://developers.google.com/gmail/api/reference/rest/v1/users.history/list
-        # ON new messages -- send it to all the watched chats linked with this email
-
-
+                                            history_type="MESSAGE_ADDED")
+        if hist:
+            logging.info(str(hist))
+            message_id = hist["history"][0]["messages"][0]["id"]
+            creds = tuple(await psqldb.get_gmail_creds(email=email))
+            user_creds = gmail_API.make_user_creds(*creds)
+            messages = await gmail_API.messages_list(
+                user_creds=user_creds,
+                messages_num=1,
+            )
+            msg = gmail_API.get_text_attachments(messages[0])
+            del messages
+            watched_chats_records = tuple(await psqldb.get_watched_chats(email=email))
+            # ON new messages -- send it to all the watched chats linked with this email
+            for chat_id_record in watched_chats_records:
+                for text in msg['text_list']:
+                    await dp.bot.send_message(chat_id_record["chat_id"], text)
+                for file in msg['attachments']:
+                    await dp.bot.send_document(
+                        chat_id_record["chat_id"],
+                        types.input_file.InputFile(
+                            BytesIO(file['file']),
+                            filename=file['filename']
+                        )
+                    )
+            del msg
     return web.Response(text='OK')
-    # TODO: delete this
 
 
 async def gauthorize_callback(request: web.Request):
@@ -121,6 +143,13 @@ async def app_on_startup(app: web.Application):
     Parameters:
         app (aiohttp.web.Application: current server app
     """
+    # update watched emails
+    # old_updated_emails = map(lambda r: r["email"], tuple(await psqldb.get_old_watched_emails(hours=48)))
+    # for email in old_updated_emails:
+    #     watch_response = await gmail_API.start_watch(email=email)
+    #     if watch_response:
+    #         await psqldb.update_email_last_watch(email=email)
+
     from TgBot import filters, middlewares
     filters.setup(dp)
     middlewares.setup(dp)

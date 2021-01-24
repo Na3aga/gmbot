@@ -1,3 +1,5 @@
+from typing import List
+
 import asyncpg
 import logging
 import ssl
@@ -131,7 +133,8 @@ class DataBase:
             """insert into watched_chat_emails (email, chat_id)
             select email, chat_id
             from chat_gmail
-            where email = $1 and chat_id = $2""",
+            where email = $1 and chat_id = $2
+            on conflict do nothing""",
             email, chat_id)
 
     @conn
@@ -163,6 +166,46 @@ class DataBase:
         await conn.execute(
             """insert into watched_emails (email, last_watch)
             values ((select email from gmail where gmail.email = $1), now())
+            on conflict do nothing
             """,
             email
         )
+
+    @conn
+    async def get_watched_chats(self, conn, email) -> List[asyncpg.Record]:
+        """
+        Get list of all watched chats with given email
+        Args:
+           same as in email_watched()
+        Returns:
+            (List[asyncpg.Record]): List of all watched chats
+        """
+        logging.debug(f"Getting all the watched chats wit email '{email}'")
+        return await conn.fetch(
+            """select chat_id
+            from watched_chat_emails
+            where email = $1""",
+            email)
+
+    @conn
+    async def get_old_watched_emails(self, conn, hours) -> List[asyncpg.Record]:
+        """
+        Get all the emails which last watch is greater than 'hours' hours ago
+        Args:
+            conn (asyncpg.pool.PoolAcquireContext): use decorator's connection pool
+            hours (int): hours difference
+        Returns:
+            (List[asyncpg.Record]): list of all the records with old updates
+        """
+        return await conn.fetch(
+            """select email
+            from watched_emails
+            where DATE_PART('day', now() - last_watch) * 24
+            + DATE_PART('hour', now() - last_watch) >= $1""",
+            hours
+        )
+
+    @conn
+    async def update_email_last_watch(self, conn, email):
+        # alter table and inserting last update time
+        pass
