@@ -53,3 +53,20 @@ BEGIN
     ON CONFLICT DO NOTHING;
 END;
 $$;
+
+CREATE TABLE IF NOT EXISTS watched_emails
+(
+    email      VARCHAR(128) NOT NULL,
+    last_watch timestamptz  NOT NULL,
+    CONSTRAINT fk_watched_email FOREIGN KEY (email) REFERENCES gmail (email) ON DELETE CASCADE,
+    CONSTRAINT pk_watched_email PRIMARY KEY (email)
+);
+
+CREATE TABLE IF NOT EXISTS watched_chat_emails
+(
+    chat_id BIGINT       NOT NULL,
+    email   VARCHAR(128) NOT NULL,
+    CONSTRAINT fk_watched_chat_id_email FOREIGN KEY (chat_id, email) REFERENCES chat_gmail (chat_id, email) ON DELETE CASCADE,
+    CONSTRAINT pk_watched_chat_id_email PRIMARY KEY (chat_id, email)
+);
+

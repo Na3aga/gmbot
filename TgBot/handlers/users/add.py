@@ -6,7 +6,7 @@ from aiogoogle.auth.utils import create_secret
 from TgBot.loader import dp
 from TgBot.utils.misc import rate_limit
 from TgBot.states.add import AddGmail
-from loader import gmail_API, CLIENT_CREDS, current_states
+from loader import gmail_API, current_states
 from re import match
 import logging
 
