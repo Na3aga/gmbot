@@ -28,6 +28,21 @@ async def answers_html(request: web.Request):
     return web.FileResponse('html/answers.html')
 
 
+async def update_one_watched_email(email):
+    logging.info("Updating last_watch: " + email)
+    creds = tuple(await psqldb.get_gmail_creds(email=email))
+    user_creds = gmail_API.make_user_creds(*creds)
+    watch_response = await gmail_API.start_watch(user_creds=user_creds,
+                                                 email=email)
+    if watch_response:
+        await psqldb.update_one_email_last_watch(email=email)
+
+
+async def update_watched_emails():
+    await psqldb.map_old_watched_emails(hours=48,
+                                        func=update_one_watched_email)
+
+
 async def bot_handler(request: web.Request):
     """Will be handling webhooks to bot
     """
@@ -143,12 +158,7 @@ async def app_on_startup(app: web.Application):
     Parameters:
         app (aiohttp.web.Application: current server app
     """
-    # update watched emails
-    # old_updated_emails = map(lambda r: r["email"], tuple(await psqldb.get_old_watched_emails(hours=48)))
-    # for email in old_updated_emails:
-    #     watch_response = await gmail_API.start_watch(email=email)
-    #     if watch_response:
-    #         await psqldb.update_email_last_watch(email=email)
+
 
     from TgBot import filters, middlewares
     filters.setup(dp)
@@ -165,7 +175,7 @@ async def app_testing_startup(app: web.Application):
     filters.setup(dp)
     middlewares.setup(dp)
     await admins_notify(dp, text="Я починаю тестування!")
-
+    await update_watched_emails()
     # WEBAPP DEBUG RUN
     await runner.setup()
     # Host must be without http://

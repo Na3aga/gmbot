@@ -216,24 +216,49 @@ class DataBase:
             email)
 
     @conn
-    async def get_old_watched_emails(self, conn, hours) -> List[asyncpg.Record]:
+    async def map_old_watched_emails(self, conn, hours: int, func: Awaitable[Callable[[str], None]]):
         """
         Get all the emails which last watch is greater than 'hours' hours ago
         Args:
             conn (asyncpg.pool.PoolAcquireContext): use decorator's connection pool
             hours (int): hours difference
+            func (Awaitable[Callable[[str], None]]): function that will be mapped on all emails
         Returns:
             (List[asyncpg.Record]): list of all the records with old updates
         """
-        return await conn.fetch(
-            """select email
-            from watched_emails
+        async with conn.transaction():
+            query = """select email
+                from watched_emails
+                where DATE_PART('day', now() - last_watch) * 24
+                + DATE_PART('hour', now() - last_watch) >= $1"""
+            async for record in conn.cursor(query, hours):
+                await func(record["email"])
+
+    @conn
+    async def update_emails_last_watch(self, conn, hours: int):
+        """
+        Update last last_watch time in emails watched more than 'hours' ago
+        Args:
+            Same as in get_old_watched_emails()
+        """
+        await conn.execute(
+            """update watched_emails
+            set last_watch = now()
             where DATE_PART('day', now() - last_watch) * 24
             + DATE_PART('hour', now() - last_watch) >= $1""",
             hours
         )
 
     @conn
-    async def update_email_last_watch(self, conn, email):
-        # alter table and inserting last update time
-        pass
+    async def update_one_email_last_watch(self, conn, email: str):
+        """
+        Update last last_watch time in given email
+        Args:
+            Same as in email_watched()
+        """
+        await conn.execute(
+            """update watched_emails
+            set last_watch = now()
+            where email = $1""",
+            email
+        )
