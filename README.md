@@ -1,6 +1,6 @@
 # Gmbot
 
-[The bot](t.me/lewis_msg_bot) is under development
+Repository for [this bot](t.me/lewis_msg_bot)
 
 #### Installation on Ubuntu Linux:
 ```
@@ -10,7 +10,7 @@ python3 -m venv /path/to/new/virtual/environment
 source /path/to/new/virtual/environment/bin/activate
 pip3 install -r requirements.txt
 ```
-Example of usege in main.py
+Example of usage in main.py
 
 For local use run with `DEBUG` argument.
 
