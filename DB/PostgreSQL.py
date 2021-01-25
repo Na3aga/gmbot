@@ -102,6 +102,7 @@ class DataBase:
         Args:
             same as in email_watched()
         """
+        logging.info(f"Email {email} deleted from 'gmail' table")
         await conn.execute(
             """delete
             from gmail

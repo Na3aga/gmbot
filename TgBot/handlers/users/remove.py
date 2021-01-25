@@ -21,13 +21,14 @@ async def start_gmail_add(message: types.Message):
 @dp.message_handler(state=RemoveGmail.Remove)
 async def remove(message: types.Message, state: FSMContext):
     email = message.text.strip()
+    chat_id = message.chat.id
     if not match(r'^[\w\.-]+@gmail\.com$', email):
-        logging.info(f"Mail {email} was rejected")
+        logging.info(f"Пошта {email} не видалена з чату {chat_id}")
         await message.answer('Невідомий формат пошти')
     else:
-        chat_id = message.chat.id
         await psqldb.remove_chat_email(email=email, chat_id=chat_id)
         await message.answer(f"Пошта {email} видалена з чату")
+        logging.info(f"Пошта {email} видалена з чату {chat_id}")
         email_chats = await psqldb.get_email_chats(email=email)
         if not email_chats:
             await psqldb.remove_email(email=email)
