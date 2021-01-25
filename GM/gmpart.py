@@ -4,11 +4,9 @@ from math import ceil
 from aiogoogle import Aiogoogle
 from email import policy
 from email.parser import BytesParser
-import email.message
 from base64 import urlsafe_b64decode
 from bs4 import BeautifulSoup, NavigableString, CData, Tag
 from html import escape
-from loader import GMAIL_PUBSUB_TOPIC_NAME
 
 
 class TelegramBeautifulSoup(BeautifulSoup):
@@ -120,35 +118,34 @@ class Gmpart():
                                 user_id='me', format='RAW'):
         """ Ask google for a full message with specific ID
         Parameters:
-            id (string): the ID of the message to retrieve.
-            user_id (string): the user's email address. The special value `me` can
-                be used to indicate the authenticated user.
-            format (enum string MINIMAL|FULL|RAW|METADATA): the format
-                to return the message in.
+        id (string): the ID of the message to retrieve.
+        userId (string): the user's email address. The special value `me` can
+        be used to indicate the authenticated user.
+        format (enum string MINIMAL|FULL|RAW|METADATA): the format
+        to return the message in.
         """
         return await aiogoogle.as_user(
             (await self.gmpart_api).users.messages.get(
                 userId=user_id,
                 id=id,
-                format=format
+                format='RAW'
             )
         )
 
     @staticmethod
-    async def make_email(future_message) -> email.message.Message:
+    async def make_email(future_message):
         """ Make email from future base64 encoded raw message
         Parameters:
-            future_message (coroutine): base64 encoded raw message
-                (maybe RFC 2822 or RFC 822)
+        future_message (coroutine): base64 encoded raw message
+            (maybe RFC 2822)
         """
-        parsed_email = BytesParser(
+        return BytesParser(
             policy=policy.default
         ).parsebytes(
             urlsafe_b64decode(
                 (await future_message)['raw']
             )
         )
-        return parsed_email
 
     @staticmethod
     def make_user_creds(access_token, refresh_token, expires_at):
@@ -219,14 +216,10 @@ class Gmpart():
         return profile['emailAddress']
 
     @aiogoogle_creds
-    async def messages_list(self, aiogoogle, user_creds,
-                            messages_num: int = 5):
+    async def messages_list(self, aiogoogle, user_creds, messages_num=5):
         """ Get last messages_num emails as email.message object
         Parameters:
-            messages_num (int): numbers of messages to be returned
-
-        Returns:
-            List[email.message.Message]: List of messages in python email lib
+        messages_num (int): numbers of messages to be returned
         """
         messages_ids = await aiogoogle.as_user(
             (await self.gmpart_api).users.messages.list(
@@ -246,54 +239,5 @@ class Gmpart():
         for m in raw_messages:
             # is there blocking?
             messages.append(await self.make_email(m))
-
         self.update_token(aiogoogle.user_creds)
         return messages
-
-    @aiogoogle_creds
-    async def start_watch(self, aiogoogle, user_creds,
-                          email):
-        """
-        Sends watch request
-        """
-        request_data = {
-            "labelIds": ["INBOX"],
-            "labelFilterAction": "INCLUDE",
-            "topicName": GMAIL_PUBSUB_TOPIC_NAME
-        }
-        return await aiogoogle.as_user(
-            (await self.gmpart_api).users.watch(
-                userId=email,
-                json=request_data
-            )
-        )
-
-    @aiogoogle_creds
-    async def stop_watch(self, aiogoogle, user_creds,
-                         email):
-        """
-        Stop receiving notifications
-        """
-        return await aiogoogle.as_user(
-            (await self.gmpart_api).users.stop(
-                userId=email
-            )
-        )
-
-    @aiogoogle_creds
-    async def read_history(self, aiogoogle, user_creds,
-                           email: str, history_id: int, max_results: int = 1,
-                           label_id: str = "INBOX",
-                           history_type: enumerate = None):
-        """
-        Read event from email with history_id
-        """
-        return await aiogoogle.as_user(
-            (await self.gmpart_api).users.history.list(
-                userId=email,
-                maxResults=max_results,
-                startHistoryId=history_id,
-                labelId=label_id,
-                historyTypes=history_type,
-            )
-        )
