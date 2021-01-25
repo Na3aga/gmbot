@@ -65,6 +65,15 @@ class DataBase:
             chat_type)
 
     @conn
+    async def remove_chat_email(self, conn, email, chat_id):
+        await conn.execute(
+            """delete
+            from chat_gmail
+            where email = $1
+              and chat_id = $2""",
+            email, chat_id)
+
+    @conn
     async def add_gmail(self, conn, email, refresh_token, access_token,
                         expires_at, chat_id):
         """
@@ -85,6 +94,20 @@ class DataBase:
             access_token,
             expires_at,
             chat_id)
+
+    @conn
+    async def remove_email(self, conn, email: str):
+        """
+        Remove email from 'gmail'
+        Args:
+            same as in email_watched()
+        """
+        await conn.execute(
+            """delete
+            from gmail
+            where email = $1""",
+            email
+        )
 
     @conn
     async def get_gmail_creds(self, conn, email: str) -> asyncpg.Record:
@@ -120,6 +143,22 @@ class DataBase:
             from chat_gmail
             where email = $1 and chat_id=$2""",
             email, chat_id)
+
+    @conn
+    async def get_email_chats(self, conn, email: str) -> List[asyncpg.Record]:
+        """
+        Get list of all chats with given email
+        Args:
+           same as in email_watched()
+        Returns:
+            (List[asyncpg.Record]): List of all watched chats
+        """
+        logging.debug(f"Getting all chats with email '{email}'")
+        return await conn.fetch(
+            """select chat_id
+            from chat_gmail
+            where email = $1""",
+            email)
 
     @conn
     async def add_watched_chat_emails(self, conn, email: str, chat_id: int):

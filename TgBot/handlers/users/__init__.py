@@ -1,6 +1,7 @@
 from .help import dp
 from .start import dp
 from .add import dp
+from .remove import dp
 from .last import dp
 from .watch import dp
 from .stop_watch import dp
