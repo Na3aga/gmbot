@@ -14,7 +14,7 @@ import logging
 @rate_limit(1, 'add')
 @dp.message_handler(Command('add'), state=None)
 async def start_gmail_add(message: types.Message):
-    text = 'Надішліть вашу електронну адресу у відповідь на це повідомлення '\
+    text = 'Надішліть електронну адресу у відповідь на це повідомлення '\
         '(тільки GMail)'
     await message.answer(text)
 
