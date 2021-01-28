@@ -170,7 +170,7 @@ class DataBase:
         )
 
     @conn
-    async def watch_email(self, conn, email: str):
+    async def watch_email(self, conn, email: str, history_id: int):
         """
         Adding already existing email from 'gmail' table to 'watched_emails' with timestamp
         Args:
@@ -178,15 +178,17 @@ class DataBase:
         """
         logging.debug(f"Start watching email '{email}'")
         await conn.execute(
-            """insert into watched_emails (email, last_watch)
-            values ((select email from gmail where gmail.email = $1), now())
-            on conflict do nothing
+            """insert into watched_emails (email, last_watch, history_id)
+            values ((select email from gmail where gmail.email = $1), now(), $2)
+            on conflict (email) do update 
+                set last_watch = excluded.last_watch
+                  , history_id = excluded.history_id
             """,
-            email
+            email, history_id,
         )
 
     @conn
-    async def remove_watch_email(self, conn, email: str):
+    async def remove_watched_email(self, conn, email: str):
         """
         Remove email from 'watched_emails'
         Args:
@@ -206,7 +208,7 @@ class DataBase:
         Args:
            same as in email_watched()
         Returns:
-            (List[asyncpg.Record]): List of all watched chats
+            List[asyncpg.Record]: List of all watched chats
         """
         logging.debug(f"Getting all the watched chats wit email '{email}'")
         return await conn.fetch(
