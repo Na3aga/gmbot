@@ -38,5 +38,5 @@ async def remove(message: types.Message, state: FSMContext):
             await gmail_API.stop_watch(
                 user_creds=user_creds,
                 email=email)
-            await psqldb.remove_watch_email(email=email)
+            await psqldb.remove_watched_email(email=email)
     await state.finish()
