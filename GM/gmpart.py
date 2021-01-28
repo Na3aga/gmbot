@@ -1,5 +1,7 @@
 import logging
 import asyncio
+from email.message import Message
+from typing import cast
 from math import ceil
 from aiogoogle import Aiogoogle
 from email import policy
@@ -39,7 +41,11 @@ class TelegramBeautifulSoup(BeautifulSoup):
             yield descendant
 
 def aiogoogle_creds(func):
-    """Add aiogoogle with credentials for every wrapped function
+    """
+        Add aiogoogle with credentials for every wrapped function
+
+        Warnings:
+            Authorisation on every user, IDK can be slow
     """
     # WARNING: only for async functions!
     async def decor(self, *args, **kwargs):
@@ -115,10 +121,10 @@ class Gmpart():
         # Downloads the API specs and creates an API object
         return await aiogoogle.discover('gmail', 'v1')
 
-    @aiogoogle_creds
     async def get_gmail_message(self, aiogoogle, id, user_creds,
                                 user_id='me', format='RAW'):
         """ Ask google for a full message with specific ID
+
         Parameters:
             id (string): the ID of the message to retrieve.
             user_id (string): the user's email address. The special value `me` can
@@ -135,17 +141,24 @@ class Gmpart():
         )
 
     @staticmethod
-    async def make_email(future_message) -> email.message.Message:
+    async def make_email(future_message) -> email.message.EmailMessage:
         """ Make email from future base64 encoded raw message
+
         Parameters:
             future_message (coroutine): base64 encoded raw message
                 (maybe RFC 2822 or RFC 822)
+
+        Returns:
+            email.message.Message: message in python lib format
         """
-        parsed_email = BytesParser(
-            policy=policy.default
-        ).parsebytes(
-            urlsafe_b64decode(
-                (await future_message)['raw']
+        parsed_email: email.message.EmailMessage = cast(
+            email.message.EmailMessage,
+            BytesParser(
+                policy=policy.default
+            ).parsebytes(
+                urlsafe_b64decode(
+                    (await future_message)['raw']
+                )
             )
         )
         return parsed_email
@@ -208,6 +221,19 @@ class Gmpart():
                 "attachments": attachments}
 
     @aiogoogle_creds
+    async def get_message_full(self, aiogoogle, user_creds,
+                               message_id: str, user_id: str = 'me'):
+        gmail_message = self.get_gmail_message(
+            aiogoogle=aiogoogle,
+            user_creds=user_creds,
+            user_id=user_id,
+            id=message_id,
+        )
+        encoded_message = await self.make_email(gmail_message)
+        full_message = self.get_text_attachments(encoded_message)
+        return full_message
+
+    @aiogoogle_creds
     async def get_email_address(self, aiogoogle, user_creds):
         """ Get email adress of current account
         Parameters:
@@ -239,7 +265,8 @@ class Gmpart():
             raw_messages.append(
                 self.get_gmail_message(
                     id=message['id'],
-                    user_creds=user_creds
+                    user_creds=user_creds,
+                    aiogoogle=aiogoogle,
                 )
             )
         messages = []
@@ -282,11 +309,30 @@ class Gmpart():
 
     @aiogoogle_creds
     async def read_history(self, aiogoogle, user_creds,
-                           email: str, history_id: int, max_results: int = 1,
+                           email: str,
+                           history_id: str,
+                           max_results: int = None,
                            label_id: str = "INBOX",
-                           history_type: enumerate = None):
+                           history_type: str = "MESSAGE_ADDED"):
         """
-        Read event from email with history_id
+        Read events starting from email with history_id
+        Args:
+            aiogoogle (Aiogoogle): Authorised aiogoogle user
+                (with active session)
+            user_creds: OAuth2 user credentials (user tokens dict etc.)
+            email (str): email which history (new emails) will be read
+            history_id (str): id from which new gmail actions will be fetched
+            max_results (int): maximum number of new events to fetch
+            label_id (str): Label which updates will be watching, one of those
+                ["SENT", "INBOX", "IMPORTANT", "TRASH", "DRAFT", "SPAM",
+                "CATEGORY_FORUMS", "CATEGORY_UPDATES", "CATEGORY_PERSONAL",
+                "CATEGORY_PROMOTIONS", "CATEGORY_SOCIAL", "STARRED", "UNREAD",
+                ...] and other user types
+            history_type (str): which actions will be watched, can be on of
+                [MESSAGE_ADDED, MESSAGE_DELETED, LABEL_ADDED, LABEL_REMOVED]
+
+        Returns:
+            : A record of a change to the user's mailbox
         """
         return await aiogoogle.as_user(
             (await self.gmpart_api).users.history.list(
