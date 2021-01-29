@@ -35,12 +35,12 @@ class DataBase:
         return self
 
     @conn
-    async def create_db(self, conn):
+    async def create_db(self, conn: asyncpg.connection.Connection):
         """
         Create DB from specified file
 
         Args:
-            conn (asyncpg.pool.PoolAcquireContext): use decorator's connection pool
+            conn (asyncpg.connection.Connection): use decorator's connection pool to get connection
         """
         logging.info('Creating DB ...')
         with open("DB/create.sql", "r") as file:
@@ -52,7 +52,7 @@ class DataBase:
         """
         Add a chat to DB
         Args:
-            conn (asyncpg.pool.PoolAcquireContext): same as in create_db
+            conn: same as in create_db
             chat_id (int): chat id can be up to 52 bits
             chat_type (str of enum): can be 'private', 'group', 'supergroup', 'channel'
         """
@@ -117,7 +117,7 @@ class DataBase:
         Args:
             email (str): gmail address up to 128 bytes
         Returns:
-            (asyncpg.Record): row with user credentials
+            asyncpg.Record: row with user credentials
         """
         logging.debug(f"Getting credentials from {email}")
         return await conn.fetchrow(
@@ -131,12 +131,12 @@ class DataBase:
         """
         Get email, chat if they are linked in 'chat_gmail' table
         Args:
-            conn: (asyncpg.pool.PoolAcquireContext): same as in create_db
+            conn: same as in create_db
             email (str): gmail address up to 128 bytes
             chat_id (int): chat id can be up to 52 bits
 
         Returns:
-            (asyncpg.Record): row with email and chat ID if they are exists in the table
+            asyncpg.Record: row with email and chat ID if they are exists in the table
         """
         logging.debug(f"Checking if chat '{chat_id}' has email '{email}'")
         return await conn.fetchrow(
@@ -210,7 +210,7 @@ class DataBase:
         )
 
     @conn
-    async def watch_email(self, conn, email: str):
+    async def watch_email(self, conn, email: str, history_id: int):
         """
         Adding already existing email from 'gmail' table to 'watched_emails' with timestamp
         Args:
@@ -218,15 +218,17 @@ class DataBase:
         """
         logging.debug(f"Start watching email '{email}'")
         await conn.execute(
-            """insert into watched_emails (email, last_watch)
-            values ((select email from gmail where gmail.email = $1), now())
-            on conflict do nothing
+            """insert into watched_emails (email, last_watch, history_id)
+            values ((select email from gmail where gmail.email = $1), now(), $2)
+            on conflict (email) do update 
+                set last_watch = excluded.last_watch
+                  , history_id = excluded.history_id
             """,
-            email
+            email, history_id,
         )
 
     @conn
-    async def remove_watch_email(self, conn, email: str):
+    async def remove_watched_email(self, conn, email: str):
         """
         Remove email from 'watched_emails'
         Args:
@@ -246,7 +248,7 @@ class DataBase:
         Args:
            same as in email_watched()
         Returns:
-            (List[asyncpg.Record]): List of all watched chats
+            List[asyncpg.Record]: List of all watched chats
         """
         logging.debug(f"Getting all the watched chats wit email '{email}'")
         return await conn.fetch(
@@ -256,15 +258,17 @@ class DataBase:
             email)
 
     @conn
-    async def map_old_watched_emails(self, conn, hours: int, func: Awaitable[Callable[[str], None]]):
+    async def apply_old_watched_emails(self, conn: asyncpg.connection.Connection,
+                                       hours: int, func: Awaitable[Callable[[str], None]]):
         """
-        Get all the emails which last watch is greater than 'hours' hours ago
+        Apply func to all the emails which last watch is greater than
+            'hours' hours ago
         Args:
-            conn (asyncpg.pool.PoolAcquireContext): use decorator's connection pool
+            conn (asyncpg.connection.Connection): use decorator's
+                connection pool to get connection
             hours (int): hours difference
-            func (Awaitable[Callable[[str], None]]): function that will be mapped on all emails
-        Returns:
-            (List[asyncpg.Record]): list of all the records with old updates
+            func (Awaitable[Callable[[str], None]]): function that will be
+                applied to all the selected watched emails
         """
         async with conn.transaction():
             query = """select email
@@ -275,30 +279,27 @@ class DataBase:
                 await func(record["email"])
 
     @conn
-    async def update_emails_last_watch(self, conn, hours: int):
+    async def update_watch_history(self, conn, email: str, history_id: int):
         """
-        Update last last_watch time in emails watched more than 'hours' ago
+        Update history_id in given email
         Args:
-            Same as in get_old_watched_emails()
-        """
-        await conn.execute(
-            """update watched_emails
-            set last_watch = now()
-            where DATE_PART('day', now() - last_watch) * 24
-            + DATE_PART('hour', now() - last_watch) >= $1""",
-            hours
-        )
+            conn: same as in create_db
+            email (str): gmail address up to 128 bytes
+            history_id (int): last synced history id. Had to be uint64 but in
+                PostgreSQL maximum is int64 as BIGINT
 
-    @conn
-    async def update_one_email_last_watch(self, conn, email: str):
+        Returns:
+            int: history_id value before it's update
+
         """
-        Update last last_watch time in given email
-        Args:
-            Same as in email_watched()
-        """
-        await conn.execute(
+        return await conn.fetchval(
             """update watched_emails
-            set last_watch = now()
-            where email = $1""",
-            email
+            set 
+                history_id = $2
+            where email = $1
+            returning
+                (select history_id
+                from watched_emails
+                where email = $1)""",
+            email, history_id
         )

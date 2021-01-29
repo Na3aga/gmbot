@@ -35,12 +35,15 @@ async def update_one_watched_email(email):
     watch_response = await gmail_API.start_watch(user_creds=user_creds,
                                                  email=email)
     if watch_response:
-        await psqldb.update_one_email_last_watch(email=email)
+        await psqldb.watch_email(
+            email=email,
+            history_id=int(watch_response["historyId"])
+        )
 
 
 async def update_watched_emails():
-    await psqldb.map_old_watched_emails(hours=48,
-                                        func=update_one_watched_email)
+    await psqldb.apply_old_watched_emails(hours=48,
+                                          func=update_one_watched_email)
 
 
 async def bot_handler(request: web.Request):
@@ -58,7 +61,8 @@ async def bot_handler(request: web.Request):
 
 
 async def gmail_pubsub_push(request: web.Request):
-    """Will be handling webhooks from gmail
+    """
+        Handle webhooks from gmail (google pub/sub subscribition)
     """
     MAX_SIZE = 26214400
     if request.content_length > MAX_SIZE:
@@ -71,37 +75,41 @@ async def gmail_pubsub_push(request: web.Request):
             urlsafe_b64decode(notification_data).decode('utf-8')
         )
         email: str = update["emailAddress"]
-        history_id: int = update["historyId"]
+        new_history_id: int = int(update["historyId"])
         creds = tuple(await psqldb.get_gmail_creds(email=email))
         user_creds = gmail_API.make_user_creds(*creds)
-        hist = await gmail_API.read_history(user_creds=user_creds,
-                                            email=email,
-                                            history_id=str(history_id),
-                                            history_type=None)
-        if hist.get("history"):
-            message_id = hist["history"][0]["messages"][0]["id"]
-            creds = tuple(await psqldb.get_gmail_creds(email=email))
-            user_creds = gmail_API.make_user_creds(*creds)
-            messages = await gmail_API.messages_list(
-                user_creds=user_creds,
-                messages_num=1,
-            )
-            msg = gmail_API.get_text_attachments(messages[0])
-            del messages
-            watched_chats_records = tuple(await psqldb.get_watched_chats(email=email))
-            # ON new messages -- send it to all the watched chats linked with this email
-            for chat_id_record in watched_chats_records:
-                for text in msg['text_list']:
-                    await dp.bot.send_message(chat_id_record["chat_id"], text)
-                for file in msg['attachments']:
-                    await dp.bot.send_document(
-                        chat_id_record["chat_id"],
-                        types.input_file.InputFile(
-                            BytesIO(file['file']),
-                            filename=file['filename']
+        history_id = await psqldb.update_watch_history(email=email, history_id=new_history_id)
+        if history_id:
+            # TODO: Catch 404 and make a full sync in that case
+            # https://developers.google.com/gmail/api/guides/sync#full_synchronization
+            hist = await gmail_API.read_history(user_creds=user_creds,
+                                                email=email,
+                                                history_id=str(history_id))
+            if hist.get("history"):
+                creds = tuple(await psqldb.get_gmail_creds(email=email))
+                user_creds = gmail_API.make_user_creds(*creds)
+                watched_chats_records = tuple(await psqldb.get_watched_chats(email=email))
+                for history_record in hist["history"]:
+                    for message_record in history_record["messages"]:
+                        message_id = message_record["id"]
+                        msg = await gmail_API.get_message_full(
+                            user_creds=user_creds,
+                            message_id=message_id,
                         )
-                    )
-            del msg
+                        # ON new messages -- send it to all the watched chats linked with this email
+                        for chat_id_record in watched_chats_records:
+                            for text in msg['text_list']:
+                                await dp.bot.send_message(chat_id_record["chat_id"], text)
+                            for file in msg['attachments']:
+                                await dp.bot.send_document(
+                                    chat_id_record["chat_id"],
+                                    types.input_file.InputFile(
+                                        BytesIO(file['file']),
+                                        filename=file['filename']
+                                    )
+                                )
+        else:
+            logging.info(f"Problems with updating history_id in {email}")
     return web.Response(text='OK')
 
 
@@ -165,6 +173,7 @@ async def app_on_startup(app: web.Application):
     middlewares.setup(dp)
     await admins_notify(dp, text="Я працюю!")
     await dp.bot.set_webhook(WEBHOOK_URL)
+    await update_watched_emails()
 
 
 async def app_testing_startup(app: web.Application):

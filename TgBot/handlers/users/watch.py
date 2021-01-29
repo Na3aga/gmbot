@@ -36,22 +36,28 @@ async def add(message: types.Message, state: FSMContext):
                                                       chat_id=chat_id)
         if not match_email_chat:
             await message.answer(
-                f'Не вдалося додати сповіщення від пошти {email}'
+                f'Пошта {email} не приєднана до чату'
             )
         else:
-            # TODO: if so -- add to the watchlist to handle new emails
+            # link email to chat to send emails in the future
             await psqldb.add_watched_chat_emails(email=email, chat_id=chat_id)
+            # then only watch email if it not already watched
             is_email_watched = await psqldb.email_watched(email=email)
-            # TODO: if email already watched -- just add to the chat, not watch
+            # if email already watched -- thats all, just add to the chat, not watch
             if not is_email_watched:
                 creds = tuple(await psqldb.get_gmail_creds(email=email))
                 user_creds = gmail_API.make_user_creds(*creds)
                 watch_response = await gmail_API.start_watch(
                     user_creds=user_creds,
                     email=email)
+                # watch response example
+                # {'historyId': '1336627', 'expiration': '1612395124174'}
                 logging.info(str(watch_response))
                 if watch_response:
-                    await psqldb.watch_email(email=email)
+                    await psqldb.watch_email(
+                        email=email,
+                        history_id=int(watch_response["historyId"])
+                    )
                     await message.answer(
                         f'Сповіщення від пошти {email} додані до чату')
                 else:
@@ -59,5 +65,5 @@ async def add(message: types.Message, state: FSMContext):
                         f'Не вдалося додати сповіщення від пошти {email}'
                     )
             else:
-                await message.answer(f'Пошта {email} додана до чату')
+                await message.answer(f'Сповіщення від пошти {email} прикріплені до чату')
     await state.finish()
