@@ -1,6 +1,6 @@
 # Gmbot
 
-Repository for [this bot](t.me/lewis_msg_bot)
+Repository for [this bot](https://t.me/lewis_msg_bot)
 
 #### Installation on Ubuntu Linux:
 ```
