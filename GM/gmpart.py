@@ -2,43 +2,16 @@ import logging
 import asyncio
 from email.message import Message
 from typing import cast
-from math import ceil
 from aiogoogle import Aiogoogle
 from email import policy
 from email.parser import BytesParser
 import email.message
 from base64 import urlsafe_b64decode
-from bs4 import BeautifulSoup, NavigableString, CData, Tag
+from bs4 import BeautifulSoup, NavigableString, CData, Tag, Comment
 from html import escape
 from loader import GMAIL_PUBSUB_TOPIC_NAME
+import re
 
-
-class TelegramBeautifulSoup(BeautifulSoup):
-    """
-    Slightly changed parser to preserve telegram-supported tags
-    """
-    telegram_tags = ['b', 'strong', 'i', 'em', 'u', 'ins', 's', 'strike',
-                     'del', 'b', 'i', 's', 'u', 'a', 'a', 'code', 'pre',
-                     'pre', 'code']
-
-    def _all_strings(self, strip=False, types=(NavigableString, CData)):
-        for descendant in self.descendants:
-            # return "a" string representation if we encounter it
-            if isinstance(descendant, Tag) and descendant.name in self.telegram_tags:
-                yield str(descendant)
-            # skip an inner text node inside "a"
-            if isinstance(descendant, NavigableString) and descendant.parent.name in self.telegram_tags:
-                continue
-            # default behavior
-            if ((types is None and not isinstance(descendant, NavigableString))
-                or
-                (types is not None and type(descendant) not in types)):
-                continue
-            if strip:
-                descendant = descendant.strip()
-                if len(descendant) == 0:
-                    continue
-            yield descendant
 
 def aiogoogle_creds(func):
     """
@@ -180,6 +153,37 @@ class Gmpart():
         }
 
     @staticmethod
+    def split_message(soup_body, limit):
+        accumulatee = []
+        temp_text = ''
+        for c in soup_body.children:
+            child_string = re.sub(r' +', ' ', str(c))
+            if len(temp_text) + len(child_string) > limit:
+                if isinstance(c, Tag):
+                    # Put all the text we have into separate list item
+                    # the new tag will be in another list item
+                    accumulatee.append(temp_text)
+                    temp_text = ''
+                elif isinstance(c, NavigableString):
+                    # We can also do as the previous but this time we
+                    # can split by newlines
+                    max_char_num = limit - len(temp_text)
+                    max_char_pos = child_string.rfind('\n', 0, max_char_num)
+                    if max_char_pos > 0:
+                        temp_text += child_string[:max_char_num]
+                        accumulatee.append(temp_text)
+                        temp_text = ''
+                        child_string = child_string[max_char_num:].lstrip()
+                    else:
+                        accumulatee.append(temp_text)
+                        temp_text = ''
+            temp_text += child_string
+        # text remains after splits
+        if temp_text:
+            accumulatee.append(temp_text)
+        return [s.strip() for s in accumulatee if s.strip()]
+
+    @staticmethod
     def get_text_attachments(msg, split_size=4096):
         """Get email text in html and attachments
         """
@@ -191,13 +195,48 @@ class Gmpart():
         text += 'Тема: <b>' + escape(msg['subject']) + '</b>\n\n'
         attachments = []
         # We can extract the richest alternative in order to display it:
-        richest = msg.get_body(preferencelist=('plain', 'html'))
+        richest = msg.get_body(preferencelist=(
+            'html',
+            'plain',
+        ))
         if richest['content-type'].maintype == 'text':
             if richest['content-type'].subtype == 'plain':
+                # TODO: markdown text to html
                 text += escape(richest.get_content())
             else:
-                soup = TelegramBeautifulSoup(richest.get_content(), 'lxml')
-                text += soup.body.getText()
+                soup = BeautifulSoup(richest.get_content(), 'lxml',)
+                body = soup.body
+                telegram_tags = ['b', 'strong', 'i', 'em', 'u', 'ins', 's', 'strike',
+                                 'del', 'b', 'i', 's', 'u', 'a', 'pre', 'code']
+                newlines = ['p', 'br', 'div']
+                # unwrap non-telegram tags, replace p, br by newlines
+                for tag in body.find_all():
+                    if tag.name not in telegram_tags:
+                        if tag.name in newlines:
+                            tag.insert_before('\n')
+                        tag.unwrap()
+                    elif tag.name in telegram_tags:
+                        # remove unnecessary attributes
+                        tag.attrs = {'href': tag.attrs['href']} if tag.attrs.get('href') else None
+                # remove comments and email conditionals
+                for tag in body.find_all(text=lambda t: isinstance(t, Comment)):
+                    tag.extract()
+                # remove navigational strings with newlines which are standing
+                # next to each other
+                pattern = r'^\n+$'
+                for tag in body.find_all(text=re.compile(pattern)):
+                    pr = tag.previous_sibling
+                    nx = tag.next_sibling
+                    if isinstance(pr, NavigableString):
+                        pr = re.match(pattern, pr)
+                    if isinstance(nx, NavigableString):
+                        nx = re.match(pattern, nx)
+                    if pr or nx:
+                        tag.extract()
+
+                body.attrs = None
+                html_text = str(body)[6:-7].strip()
+                text += html_text
                 # text += soup.body.getText('\n', strip=True)
         for part in msg.iter_attachments():
             filename = part.get_filename()
@@ -206,14 +245,18 @@ class Gmpart():
             else:
                 extension = mimetypes.guess_extension(part.get_content_type())
                 filename = 'file' + extension
-            # with open(os.path.splitext(part.get_filename())[0] + extension, 'wb') as f:
-            #     f.write(part.get_content())
             attachments.append({"filename": filename,
                                 "file": part.get_content()})
+
+        # Split by tag endings
         text_list = []
-        if split_size:
-            for i in range(ceil(len(text)/split_size)):
-                text_list.append(text[split_size*i:split_size*(i+1)])
+        if split_size and len(text) > split_size:
+            # Need to use the html.parser, because lxml "fixes" the html
+            # adding tags like: html, body, p
+            text_list = Gmpart.split_message(
+                BeautifulSoup(text, "html.parser"),
+                split_size,
+            )
         else:
             text_list.append(text)
 
