@@ -196,8 +196,8 @@ class Gmpart():
         attachments = []
         # We can extract the richest alternative in order to display it:
         richest = msg.get_body(preferencelist=(
-            'html',
             'plain',
+            'html',
         ))
         if richest['content-type'].maintype == 'text':
             if richest['content-type'].subtype == 'plain':
