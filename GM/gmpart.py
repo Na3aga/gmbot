@@ -202,7 +202,13 @@ class Gmpart():
         if richest['content-type'].maintype == 'text':
             if richest['content-type'].subtype == 'plain':
                 # TODO: markdown text to html
-                text += escape(richest.get_content())
+                markdown = escape(richest.get_content())
+                # # replace markdown to a html tags
+                # markdown = re.sub(r'(?<!(\\|\w))\*([^\n]+?[^\\])\*', r'<b>\2</b>', markdown) # bold
+                # markdown = re.sub(r'(?<!(\\|\w))\/([^\n]+?[^\\])\/', r'<i>\2</i>', markdown) # italic
+                # # italic /italic/ breaks links
+                # markdown = re.sub(r'(?<!(\\|\w))_([^\n]+?[^\\])_', r'<i>\2</i>', markdown) # underline
+                text += markdown
             else:
                 soup = BeautifulSoup(richest.get_content(), 'lxml',)
                 body = soup.body
@@ -213,7 +219,7 @@ class Gmpart():
                 for tag in body.find_all():
                     if tag.name not in telegram_tags:
                         if tag.name in newlines:
-                            tag.insert_before('\n')
+                            tag.append('\n')
                         tag.unwrap()
                     elif tag.name in telegram_tags:
                         # remove unnecessary attributes
@@ -223,15 +229,17 @@ class Gmpart():
                     tag.extract()
                 # remove navigational strings with newlines which are standing
                 # next to each other
-                pattern = r'^\n+$'
+                pattern = r'^\s+$'
                 for tag in body.find_all(text=re.compile(pattern)):
                     pr = tag.previous_sibling
                     nx = tag.next_sibling
+                    if isinstance(pr, Tag) and isinstance(nx, Tag):
+                        continue
                     if isinstance(pr, NavigableString):
                         pr = re.match(pattern, pr)
                     if isinstance(nx, NavigableString):
                         nx = re.match(pattern, nx)
-                    if pr or nx:
+                    if pr and nx:
                         tag.extract()
 
                 body.attrs = None
