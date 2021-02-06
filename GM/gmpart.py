@@ -204,10 +204,14 @@ class Gmpart():
                 # TODO: markdown text to html
                 markdown = escape(richest.get_content())
                 # # replace markdown to a html tags
-                # markdown = re.sub(r'(?<!(\\|\w))\*([^\n]+?[^\\])\*', r'<b>\2</b>', markdown) # bold
                 # markdown = re.sub(r'(?<!(\\|\w))\/([^\n]+?[^\\])\/', r'<i>\2</i>', markdown) # italic
                 # # italic /italic/ breaks links
                 # markdown = re.sub(r'(?<!(\\|\w))_([^\n]+?[^\\])_', r'<i>\2</i>', markdown) # underline
+                markdown = re.sub(
+                    r"([A-ґ]+)\s+(<|\(|(&lt;))((\w+:\/\/)[-a-zA-Z0-9:@;?&=\/%\+\.\*!'\(\),\$_\{\}\^~\[\]`#|]+)(>|\)|(&gt;))",
+                    r'<a href="\4">\1</a>',
+                    markdown)
+                markdown = re.sub(r'(?<!(\\|\w))\*([^\n]+?[^\\])\*', r'<b>\2</b>', markdown) # bold
                 text += markdown
             else:
                 soup = BeautifulSoup(richest.get_content(), 'lxml',)
