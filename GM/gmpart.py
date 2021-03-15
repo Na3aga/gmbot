@@ -153,11 +153,11 @@ class Gmpart():
         }
 
     @staticmethod
-    def split_message(soup_body, limit):
+    def split_html_message(soup_body, limit):
         accumulatee = []
         temp_text = ''
         for c in soup_body.children:
-            child_string = re.sub(r' +', ' ', str(c))
+            child_string = re.sub(r' +', ' ', str(escape(c) if isinstance(c, NavigableString) else c))
             if len(temp_text) + len(child_string) > limit:
                 if isinstance(c, Tag):
                     # Put all the text we have into separate list item
@@ -168,7 +168,7 @@ class Gmpart():
                     # We can also do as the previous but this time we
                     # can split by newlines
                     max_char_num = limit - len(temp_text)
-                    max_char_pos = child_string.rfind('\n', 0, max_char_num)
+                    max_char_pos = child_string.rfind('\n', 5, max_char_num)
                     if max_char_pos > 0:
                         temp_text += child_string[:max_char_num]
                         accumulatee.append(temp_text)
@@ -184,7 +184,17 @@ class Gmpart():
         return [s.strip() for s in accumulatee if s.strip()]
 
     @staticmethod
-    def get_text_attachments(msg, split_size=4096):
+    def split_text_message(text, limit):
+        while text:
+            pos = text.rfind(' ', 0, limit)
+            if not pos:
+                pos = len(text)
+            yield text[:pos]
+            text = text[pos:]
+
+
+    @staticmethod
+    def get_text_attachments(msg, split_size=4096 - 8):
         """Get email text in html and attachments
         """
         import mimetypes
@@ -194,10 +204,11 @@ class Gmpart():
         text += 'Кому: <b>' + escape(msg['to']) + '</b>\n'
         text += 'Тема: <b>' + escape(msg['subject']) + '</b>\n\n'
         attachments = []
+        text_list = []
         # We can extract the richest alternative in order to display it:
         richest = msg.get_body(preferencelist=(
-            'plain',
             'html',
+            'plain',
         ))
         if richest['content-type'].maintype == 'text':
             if richest['content-type'].subtype == 'plain':
@@ -211,20 +222,34 @@ class Gmpart():
                     r"([A-ґ]+)\s+(<|\(|(&lt;))((\w+:\/\/)[-a-zA-Z0-9:@;?&=\/%\+\.\*!'\(\),\$_\{\}\^~\[\]`#|]+)(>|\)|(&gt;))",
                     r'<a href="\4">\1</a>',
                     markdown)
-                markdown = re.sub(r'(?<!(\\|\w))\*([^\n]+?[^\\])\*', r'<b>\2</b>', markdown) # bold
+                markdown = re.sub(r'(?<!(\\|\w))\*([^\n]+?[^\\])\*', r'<b>\2</b>', markdown)  # bold
+                markdown = re.sub(r' &lt;mailto:([\w\.\-_@]+)&gt;', '', markdown)  # mailto links
                 text += markdown
+                text_list = Gmpart.split_html_message(
+                    BeautifulSoup(text, "html.parser"),
+                    split_size,
+                )
+                # text_list += Gmpart.split_text_message(text, split_size)
             else:
                 soup = BeautifulSoup(richest.get_content(), 'lxml',)
                 body = soup.body
                 telegram_tags = ['b', 'strong', 'i', 'em', 'u', 'ins', 's', 'strike',
                                  'del', 'b', 'i', 's', 'u', 'a', 'pre', 'code']
+                tags_to_extract = ['style', 'script', 'iframe']
                 newlines = ['p', 'br', 'div']
                 # unwrap non-telegram tags, replace p, br by newlines
                 for tag in body.find_all():
                     if tag.name not in telegram_tags:
                         if tag.name in newlines:
                             tag.append('\n')
-                        tag.unwrap()
+                        # remove quoted and tags like script, style
+                        if tag.name in tags_to_extract or (
+                                tag.attrs.get('class') and
+                                ('quoted' in tag.attrs['class'][0] or
+                                 "_quote" in tag.attrs['class'][0])):
+                            tag.extract()
+                        else:
+                            tag.unwrap()
                     elif tag.name in telegram_tags:
                         # remove unnecessary attributes
                         tag.attrs = {'href': tag.attrs['href']} if tag.attrs.get('href') else None
@@ -247,9 +272,13 @@ class Gmpart():
                         tag.extract()
 
                 body.attrs = None
-                html_text = str(body)[6:-7].strip()
-                text += html_text
-                # text += soup.body.getText('\n', strip=True)
+                # splitter here
+                text_list = Gmpart.split_html_message(body, split_size - len(text))
+                if text_list:
+                    text_list[0] = text + text_list[0].lstrip()
+                    text_list[-1] = text_list[-1].rstrip()
+                else:
+                    text_list = [text]
         for part in msg.iter_attachments():
             filename = part.get_filename()
             if filename:
@@ -260,17 +289,18 @@ class Gmpart():
             attachments.append({"filename": filename,
                                 "file": part.get_content()})
 
-        # Split by tag endings
-        text_list = []
-        if split_size and len(text) > split_size:
-            # Need to use the html.parser, because lxml "fixes" the html
-            # adding tags like: html, body, p
-            text_list = Gmpart.split_message(
-                BeautifulSoup(text, "html.parser"),
-                split_size,
-            )
-        else:
-            text_list.append(text)
+        # ignore ampersand encoded symbols by ampersand encoding
+        # text = re.sub(r'&([a-z]+;)', r'&amp;\1', text)
+        # # Split by tag endings
+        # if split_size and len(text) > split_size:
+        #     # Need to use the html.parser, because lxml "fixes" the html
+        #     # adding tags like: html, body, p
+        #     text_list = Gmpart.split_html_message(
+        #         BeautifulSoup(text, "html.parser"),
+        #         split_size,
+        #     )
+        # else:
+        #     text_list.append(text)
 
         return {"text_list": text_list,
                 "attachments": attachments}
