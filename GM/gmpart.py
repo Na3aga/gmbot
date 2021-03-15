@@ -95,14 +95,14 @@ class Gmpart():
         return await aiogoogle.discover('gmail', 'v1')
 
     async def get_gmail_message(self, aiogoogle, id, user_creds,
-                                user_id='me', format='RAW'):
+                                user_id='me', format='raw'):
         """ Ask google for a full message with specific ID
 
         Parameters:
             id (string): the ID of the message to retrieve.
             user_id (string): the user's email address. The special value `me` can
                 be used to indicate the authenticated user.
-            format (enum string MINIMAL|FULL|RAW|METADATA): the format
+            format (enum string "minimal", "full", "raw", "metadata"): the format
                 to return the message in.
         """
         return await aiogoogle.as_user(
@@ -340,7 +340,7 @@ class Gmpart():
         """
         request_data = {
             "labelIds": ["INBOX"],
-            "labelFilterAction": "INCLUDE",
+            "labelFilterAction": "include",
             "topicName": GMAIL_PUBSUB_TOPIC_NAME
         }
         return await aiogoogle.as_user(
@@ -368,7 +368,7 @@ class Gmpart():
                            history_id: str,
                            max_results: int = None,
                            label_id: str = "INBOX",
-                           history_type: str = "MESSAGE_ADDED"):
+                           history_type: str = "messageAdded"):
         """
         Read events starting from email with history_id
         Args:
@@ -384,7 +384,7 @@ class Gmpart():
                 "CATEGORY_PROMOTIONS", "CATEGORY_SOCIAL", "STARRED", "UNREAD",
                 ...] and other user types
             history_type (str): which actions will be watched, can be on of
-                [MESSAGE_ADDED, MESSAGE_DELETED, LABEL_ADDED, LABEL_REMOVED]
+                ["messageAdded", "messageDeleted", "labelAdded", "labelRemoved"]
 
         Returns:
             : A record of a change to the user's mailbox
