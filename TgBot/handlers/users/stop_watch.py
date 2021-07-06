@@ -32,7 +32,7 @@ async def remove(message: types.Message, state: FSMContext):
                              reply_markup=types.ReplyKeyboardRemove())
     else:
         await psqldb.remove_watched_chat_emails(email=email, chat_id=chat_id)
-        await message.answer(f'Сповіщення від пошти {email} відключені')
+        await message.answer(f'Сповіщення від пошти {email} відключені', reply_markup=types.ReplyKeyboardRemove())
         watched_chats = tuple(await psqldb.get_watched_chats(email=email))
         if not watched_chats:
             creds = tuple(await psqldb.get_gmail_creds(email=email))

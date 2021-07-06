@@ -39,7 +39,8 @@ async def add(message: types.Message, state: FSMContext):
                                                       chat_id=chat_id)
         if not match_email_chat:
             await message.answer(
-                f'Пошта {email} не приєднана до чату'
+                f'Пошта {email} не приєднана до чату',
+                reply_markup=types.ReplyKeyboardRemove()
             )
         else:
             # link email to chat to send emails in the future
@@ -62,11 +63,14 @@ async def add(message: types.Message, state: FSMContext):
                         history_id=int(watch_response["historyId"])
                     )
                     await message.answer(
-                        f'Сповіщення від пошти {email} додані до чату')
+                        f'Сповіщення від пошти {email} додані до чату',
+                        reply_markup=types.ReplyKeyboardRemove())
                 else:
                     await message.answer(
-                        f'Не вдалося додати сповіщення від пошти {email}'
+                        f'Не вдалося додати сповіщення від пошти {email}',
+                        reply_markup=types.ReplyKeyboardRemove()
                     )
             else:
-                await message.answer(f'Сповіщення від пошти {email} прикріплені до чату')
+                await message.answer(f'Сповіщення від пошти {email} прикріплені до чату',
+                                     reply_markup=types.ReplyKeyboardRemove())
     await state.finish()
