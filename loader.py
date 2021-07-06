@@ -8,7 +8,7 @@ current_states = {}
 
 gmail_API = Gmpart().make(CLIENT_CREDS)
 
-"""a bit unvertain about that
+"""a bit uncertain about that
 uses low-level API of asyncio
 this loop also uses in main file"""
 loop = asyncio.get_event_loop()

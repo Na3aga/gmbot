@@ -162,6 +162,24 @@ class DataBase:
             email)
 
     @conn
+    async def get_chat_emails(self, conn, chat_id: int) -> List[asyncpg.Record]:
+        """
+        Get list of all emails with given chat_id
+        Args:
+            conn (asyncpg.connection.Connection): use decorator's connection pool to get connection
+            chat_id (int): chat id can be up to 52 bits
+
+        Returns:
+            (List[asyncpg.Record]): List of all emails linked to the chat
+        """
+        logging.debug(f"Getting all emails linked to the chat {chat_id}")
+        return await conn.fetch(
+            """select email
+            from chat_gmail
+            where chat_id = $1""",
+            chat_id)
+
+    @conn
     async def add_watched_chat_emails(self, conn, email: str, chat_id: int):
         """
         Adding already linked chat and email from 'chat_gmail' table to watched_chat_emails
