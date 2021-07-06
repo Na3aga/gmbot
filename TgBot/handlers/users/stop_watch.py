@@ -3,6 +3,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.builtin import Command
 from TgBot.loader import dp
 from TgBot.utils.misc import rate_limit
+from TgBot.utils import chat_emails_keyboard
 from TgBot.states.stop_watch import StopWatchGmail
 
 from loader import gmail_API, psqldb
@@ -17,7 +18,7 @@ async def stop_watch_email(message: types.Message):
     """
     text = 'Надішліть у відповідь вашу електронну пошту, з якої ' \
            'більше не бажаєте отримувати нові листи в цей чат (тільки GMail)'
-    await message.answer(text)
+    await message.answer(text, reply_markup=await chat_emails_keyboard(message.chat.id))
 
     await StopWatchGmail.Remove.set()
 
@@ -27,7 +28,8 @@ async def remove(message: types.Message, state: FSMContext):
     chat_id = message.chat.id
     if not match(r'^[\w\.-]+@gmail\.com$', email):
         logging.info(f"Mail {email} was rejected")
-        await message.answer('Невідомий формат пошти')
+        await message.answer('Невідомий формат пошти',
+                             reply_markup=types.ReplyKeyboardRemove())
     else:
         await psqldb.remove_watched_chat_emails(email=email, chat_id=chat_id)
         await message.answer(f'Сповіщення від пошти {email} відключені')

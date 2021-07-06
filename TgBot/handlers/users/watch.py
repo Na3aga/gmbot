@@ -3,6 +3,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.builtin import Command
 from TgBot.loader import dp
 from TgBot.utils.misc import rate_limit
+from TgBot.utils import chat_emails_keyboard
 from TgBot.states.watch import WatchGmail
 
 from loader import gmail_API, psqldb
@@ -18,8 +19,9 @@ async def start_watch_email(message: types.Message):
     """
     text = 'Надішліть у відповідь вашу електронну пошту, з якої ' \
            'бажаєте отримувати нові листи (тільки GMail)'
-    await message.answer(text)
+    # get available emails and put it in a keyboard layout
 
+    await message.answer(text, reply_markup=await chat_emails_keyboard(message.chat.id))
     await WatchGmail.Add.set()
 
 
@@ -28,10 +30,11 @@ async def add(message: types.Message, state: FSMContext):
     email = message.text.strip()
     chat_id = message.chat.id
     if not match(r'^[\w\.-]+@gmail\.com$', email):
-        logging.info(f"Mail {email} was rejected")
-        await message.answer('Невідомий формат пошти')
+        logging.info(f"Mail <{email}> was rejected")
+        await message.answer('Невідомий формат пошти',
+                             reply_markup=types.ReplyKeyboardRemove())
     else:
-        # TODO: check if that email is attached to the chat
+        # check if that email is attached to the chat
         match_email_chat = await psqldb.email_in_chat(email=email,
                                                       chat_id=chat_id)
         if not match_email_chat:
