@@ -194,7 +194,7 @@ class Gmpart():
 
 
     @staticmethod
-    def get_text_attachments(msg, split_size=4096 - 8):
+    def get_text_attachments(msg, split_size=4096 - 8, cut_forwarded=False):
         """Get email text in html and attachments
         """
         import mimetypes
@@ -245,8 +245,10 @@ class Gmpart():
                         # remove quoted and tags like script, style
                         if tag.name in tags_to_extract or (
                                 tag.attrs.get('class') and
-                                ('quoted' in tag.attrs['class'][0] or
-                                 "_quote" in tag.attrs['class'][0])):
+                                (('quoted' in tag.attrs['class'][0] or
+                                 "_quote" in tag.attrs['class'][0]) and
+                                cut_forwarded)
+                        ):
                             tag.extract()
                         else:
                             tag.unwrap()
